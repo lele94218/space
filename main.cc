@@ -1,8 +1,10 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
-#include <stab/stab_image.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
 #include "error.h"
@@ -24,20 +26,23 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
 }
 
-
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 const float vertices[] = {
-     // positions         // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+    // positions         // colors           // texture coords
+    0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+    0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // bottom right
+    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+    -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f   // top left
 };
 const unsigned int indices[] = {
-     0, 1, 3, // first triangle
-     1, 2, 3  // second triangle
+    0,
+    1,
+    3,  // first triangle
+    1,
+    2,
+    3  // second triangle
 };
 
 int main() {
@@ -80,8 +85,8 @@ int main() {
   glGenBuffers(1, &VBO);
   unsigned int VAO;
   glGenVertexArrays(1, &VAO);
-   unsigned int EBO;
-   glGenBuffers(1, &EBO);
+  unsigned int EBO;
+  glGenBuffers(1, &EBO);
   // 1. bind Vertex Array Object
   glBindVertexArray(VAO);
   // 2. copy our vertices array in a buffer for OpenGL to use
@@ -120,6 +125,13 @@ int main() {
 
     // render
     // ------
+
+    // Transformation
+    glm::mat4 trans = glm::mat4(1.0f);
+    trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+    trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+    shader.setMatrix4("transform", glm::value_ptr(trans));
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     texture1.use(0);
