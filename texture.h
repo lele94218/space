@@ -5,7 +5,6 @@
 enum class ImageFormat {
   JPEG = 1,
   PNG = 2,
-
 };
 
 class Texture {
