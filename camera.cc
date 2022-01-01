@@ -16,7 +16,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
   worldUp_ = up;
   yaw_ = yaw;
   pitch_ = pitch;
-  updateCameraVectors();
+  UpdateCameraVectors();
 }
 
 Camera::Camera(
@@ -29,7 +29,7 @@ Camera::Camera(
   worldUp_ = glm::vec3(upX, upY, upZ);
   yaw_ = yaw;
   pitch_ = pitch;
-  updateCameraVectors();
+  UpdateCameraVectors();
 }
 
 glm::mat4 Camera::GetViewMatrix() const { return glm::lookAt(position_, position_ + front_, up_); }
@@ -68,7 +68,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
   }
 
   // update Front, Right and Up Vectors using the updated Euler angles
-  updateCameraVectors();
+  UpdateCameraVectors();
 }
 
 void Camera::ProcessMouseScroll(float yoffset) {
@@ -77,7 +77,7 @@ void Camera::ProcessMouseScroll(float yoffset) {
   if (zoom_ > 45.0f) zoom_ = 45.0f;
 }
 
-void Camera::updateCameraVectors() {
+void Camera::UpdateCameraVectors() {
   // calculate the new Front vector
   glm::vec3 next_front;
   next_front.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));

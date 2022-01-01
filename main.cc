@@ -18,8 +18,11 @@ bool firstMouse = true;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-float lastX = 800.0f / 2.0;
-float lastY = 600.0 / 2.0;
+// settings
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+float lastX = SCR_WIDTH / 2.0;
+float lastY = SCR_HEIGHT / 2.0;
 float fov = 45.0f;
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react
@@ -70,18 +73,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
 }
 
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-/*
-const float vertices[] = {
-    // positions         // colors           // texture coords
-    0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
-    0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,  // bottom right
-    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
-    -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f   // top left
-};
-*/
+
 const float vertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -136,14 +128,6 @@ const glm::vec3 cubePositions[] = {
     glm::vec3(1.5f, 2.0f, -2.5f),
     glm::vec3(1.5f, 0.2f, -1.5f),
     glm::vec3(-1.3f, 1.0f, -1.5f),
-};
-const unsigned int indices[] = {
-    0,
-    1,
-    3,  // first triangle
-    1,
-    2,
-    3  // second triangle
 };
 
 int main() {
@@ -247,7 +231,8 @@ int main() {
     glm::mat4 view = camera.GetViewMatrix();
     // Projection
     glm::mat4 projection;
-    projection = glm::perspective(glm::radians(camera.zoom()), 800.0f / 600.0f, 0.1f, 100.0f);
+    projection =
+        glm::perspective(glm::radians(camera.zoom()), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
     shader.setMatrix4("view", glm::value_ptr(view));
     shader.setMatrix4("projection", glm::value_ptr(projection));
 

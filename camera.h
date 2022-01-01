@@ -47,7 +47,7 @@ class Camera {
 
  private:
   // calculates the front vector from the Camera's (updated) Euler Angles
-  void updateCameraVectors();
+  void UpdateCameraVectors();
 
   // camera Attributes
   glm::vec3 position_;
