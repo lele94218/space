@@ -153,7 +153,7 @@ int main() {
   }
 
   // load shader
-  Shader color_shader("shaders/color_shader.vs", "shaders/color_shader.fs");
+  Shader material_shader("shaders/material_shader.vs", "shaders/material_shader.fs");
   Shader light_shader("shaders/light_shader.vs", "shaders/light_shader.fs");
 
   // Configure OpenGL state
@@ -208,9 +208,35 @@ int main() {
     processInput(window);
 
     // Draw the cube
-    color_shader.use();
-    color_shader.setVector3("objectColor", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-    color_shader.setVector3("lightColor", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+    material_shader.use();
+    material_shader.setVector3("objectColor", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+    material_shader.setVector3("lightColor", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+    // be sure to activate shader when setting uniforms/drawing objects
+    material_shader.use();
+    material_shader.setVector3("light.position", glm::value_ptr(light_pos));
+    material_shader.setVector3("view_pos", glm::value_ptr(camera.position()));
+
+    // light properties
+    glm::vec3 lightColor;
+    lightColor.x = sin(glfwGetTime() * 2.0f);
+    lightColor.y = sin(glfwGetTime() * 0.7f);
+    lightColor.z = sin(glfwGetTime() * 1.3f);
+    glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);    // decrease the influence
+    glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);  // low influence
+    material_shader.setVector3("light.ambient", glm::value_ptr(ambientColor));
+    material_shader.setVector3("light.diffuse", glm::value_ptr(diffuseColor));
+    material_shader.setVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+
+    // material properties
+    material_shader.setVector3("material.ambient", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+    material_shader.setVector3("material.diffuse", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
+    material_shader.setVector3(
+        "material.specular",
+        glm::value_ptr(glm::vec3(
+            0.5f,
+            0.5f,
+            0.5f)));  // specular lighting doesn't have full effect on this object's material
+    material_shader.setFloat("material.shininess", 32.0f);
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -221,14 +247,12 @@ int main() {
     glm::mat4 projection;
     projection =
         glm::perspective(glm::radians(camera.zoom()), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-    color_shader.setMatrix4("view", glm::value_ptr(view));
-    color_shader.setMatrix4("projection", glm::value_ptr(projection));
-    color_shader.setVector3("lightPos", glm::value_ptr(light_pos));
-    color_shader.setVector3("viewPos", glm::value_ptr(camera.position()));
+    material_shader.setMatrix4("view", glm::value_ptr(view));
+    material_shader.setMatrix4("projection", glm::value_ptr(projection));
 
     // Model
     glm::mat4 model = glm::mat4(1.0f);
-    color_shader.setMatrix4("model", glm::value_ptr(model));
+    material_shader.setMatrix4("model", glm::value_ptr(model));
     // Render the cube
     glBindVertexArray(cube_VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -256,7 +280,7 @@ int main() {
   glDeleteVertexArrays(1, &cube_VAO);
   glDeleteVertexArrays(1, &light_VAO);
   glDeleteBuffers(1, &VBO);
-  color_shader.reset();
+  material_shader.reset();
   light_shader.reset();
   // glfw: terminate, clearing all previously allocated GLFW resources.
   // ------------------------------------------------------------------
