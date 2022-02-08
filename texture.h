@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "texture.h"
+
 enum class ImageFormat {
   JPEG = 1,
   PNG = 2,
