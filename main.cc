@@ -1,10 +1,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
 #include <glad/glad.h>
+#include <glog/logging.h>
+#include <stab/stab_image.h>
 
-#include <assimp/Importer.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -12,8 +11,8 @@
 
 #include "camera.h"
 #include "error.h"
+#include "model.h"
 #include "shader.h"
-#include "texture.h"
 
 float delta_time = 0.0f;  // Time between current frame and last frame
 float last_frame = 0.0f;  // Time of last frame
@@ -80,50 +79,40 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 
 float vertices[] = {
     // positions          // normals           // texture coords
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  0.0f,  0.5f,  -0.5f, -0.5f, 0.0f,
+    0.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f,  1.0f,
+    0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f,  1.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,
+    0.0f,  -1.0f, 0.0f,  1.0f,  -0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f,  0.0f,
 
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,  0.5f,  -0.5f, 0.5f,  0.0f,
+    0.0f,  1.0f,  1.0f,  0.0f,  0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
+    0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,  -0.5f, 0.5f,  0.5f,  0.0f,
+    0.0f,  1.0f,  0.0f,  1.0f,  -0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+    -0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  -0.5f, -1.0f,
+    0.0f,  0.0f,  1.0f,  1.0f,  -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  0.0f,  1.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  0.0f,  1.0f,  -0.5f, -0.5f, 0.5f,  -1.0f,
+    0.0f,  0.0f,  0.0f,  0.0f,  -0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+    0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  0.5f,  0.5f,  -0.5f, 1.0f,
+    0.0f,  0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
+    0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  1.0f,
+    0.0f,  0.0f,  0.0f,  0.0f,  0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
 
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+    -0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f,  1.0f,  0.5f,  -0.5f, -0.5f, 0.0f,
+    -1.0f, 0.0f,  1.0f,  1.0f,  0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f,  0.0f,
+    0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f,  0.0f,  -0.5f, -0.5f, 0.5f,  0.0f,
+    -1.0f, 0.0f,  0.0f,  0.0f,  -0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f,  1.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-};
+    -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  0.5f,  0.5f,  -0.5f, 0.0f,
+    1.0f,  0.0f,  1.0f,  1.0f,  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+    0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  0.5f,  0.0f,
+    1.0f,  0.0f,  0.0f,  0.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,  1.0f};
 
-int main() {
+int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
+  // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
+  stbi_set_flip_vertically_on_load(true);
   // glfw: initialize and configure
   // ------------------------------
   glfwInit();
@@ -157,37 +146,17 @@ int main() {
   }
 
   // load shader
-  Shader material_shader("shaders/material_shader.vs", "shaders/material_shader.fs");
+  Shader model_shader("shaders/model_shader.vs", "shaders/model_shader.fs");
   Shader light_shader("shaders/light_shader.vs", "shaders/light_shader.fs");
 
-  // load texture
-  Texture texture_1("assets/container2.png", ImageFormat::PNG);
-  Texture texture_2("assets/container2_specular.png", ImageFormat::PNG);
+  // load model
+  Model backpack_model("assets/backpack/backpack.obj");
 
   // Configure OpenGL state
   glEnable(GL_DEPTH_TEST);
 
   unsigned int VBO;
   glGenBuffers(1, &VBO);
-
-  // Create cube
-  unsigned int cube_VAO;
-  glGenVertexArrays(1, &cube_VAO);
-  // 1. bind Vertex Array Object
-  glBindVertexArray(cube_VAO);
-  // 2. copy our vertices array in a buffer for OpenGL to use
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  // 3. then set our vertex attributes pointers
-  // position attribute
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-  // normal attribute
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  // texutre attribute
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-  glEnableVertexAttribArray(2);
 
   // Create light
   unsigned int light_VAO;
@@ -218,53 +187,27 @@ int main() {
     // -----
     processInput(window);
 
-    texture_1.use(0);
-    texture_2.use(1);
-
-    // Draw the cube
-    material_shader.use();
-    material_shader.setVector3("objectColor", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-    material_shader.setVector3("lightColor", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-    // be sure to activate shader when setting uniforms/drawing objects
-    material_shader.use();
-    material_shader.setVector3("light.position", glm::value_ptr(light_pos));
-    material_shader.setVector3("view_pos", glm::value_ptr(camera.position()));
-
-    // light properties
-    // glm::vec3 lightColor;
-    // lightColor.x = sin(glfwGetTime() * 2.0f);
-    // lightColor.y = sin(glfwGetTime() * 0.7f);
-    // lightColor.z = sin(glfwGetTime() * 1.3f);
-    // glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);    // decrease the influence
-    // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);  // low influence
-    material_shader.setVector3("light.ambient", glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
-    material_shader.setVector3("light.diffuse", glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
-    material_shader.setVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-
-    // material properties
-    material_shader.setVector3("material.ambient", glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.31f)));
-    material_shader.setInt("material.diffuse", 0);
-    material_shader.setInt("material.specular", 1);
-    material_shader.setFloat("material.shininess", 32.0f);
-
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    model_shader.use();
     // View (Camera)
     glm::mat4 view = camera.GetViewMatrix();
     // Projection
     glm::mat4 projection;
     projection =
         glm::perspective(glm::radians(camera.zoom()), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
-    material_shader.setMatrix4("view", glm::value_ptr(view));
-    material_shader.setMatrix4("projection", glm::value_ptr(projection));
+    model_shader.setMatrix4("projection", glm::value_ptr(projection));
+    model_shader.setMatrix4("view", glm::value_ptr(view));
 
-    // Model
+    // render the loaded model
     glm::mat4 model = glm::mat4(1.0f);
-    material_shader.setMatrix4("model", glm::value_ptr(model));
-    // Render the cube
-    glBindVertexArray(cube_VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    // translate it down so it's at the center of the scene
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    // it's a bit too big for our scene, so scale it down
+    model_shader.setMatrix4("model", glm::value_ptr(model));
+    backpack_model.Draw(model_shader);
 
     // Draw the light
     light_shader.use();
@@ -286,10 +229,9 @@ int main() {
   }
   // optional: de-allocate all resources once they've outlived their purpose:
   // ------------------------------------------------------------------------
-  glDeleteVertexArrays(1, &cube_VAO);
   glDeleteVertexArrays(1, &light_VAO);
   glDeleteBuffers(1, &VBO);
-  material_shader.reset();
+  model_shader.reset();
   light_shader.reset();
   // glfw: terminate, clearing all previously allocated GLFW resources.
   // ------------------------------------------------------------------

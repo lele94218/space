@@ -1,6 +1,6 @@
 #include "error.h"
 
-#include <iostream>
+#include <glog/logging.h>
 
 GLenum glCheckError_(const char* file, int line) {
   GLenum errorCode;
@@ -26,7 +26,7 @@ GLenum glCheckError_(const char* file, int line) {
         error = "missing";
         break;
     }
-    std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+    LOG(ERROR) << error << " | " << file << " (" << line << ")";
   }
   return errorCode;
 }

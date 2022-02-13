@@ -1,10 +1,11 @@
+#include "shader.h"
+
 #include <glad/glad.h>
+#include <glog/logging.h>
 
 #include <fstream>
 #include <iostream>
 #include <sstream>
-
-#include "shader.h"
 
 unsigned int Shader::LoadVertaxShader(const char* vertexShaderSource) const {
   unsigned int vertexShader;
@@ -16,7 +17,7 @@ unsigned int Shader::LoadVertaxShader(const char* vertexShaderSource) const {
   glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+    LOG(ERROR) << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog;
   }
   return vertexShader;
 }
@@ -31,7 +32,7 @@ unsigned int Shader::LoadFragmentShader(const char* fragmentShaderSource) const 
   glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+    LOG(ERROR) << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog;
   }
   return fragmentShader;
 }
@@ -47,7 +48,7 @@ void Shader::LinkShaderProgram(unsigned int vertexShader, unsigned int fragmentS
   glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
   if (!success) {
     glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+    LOG(ERROR) << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog;
   }
   glDeleteShader(vertexShader);
   glDeleteShader(fragmentShader);
@@ -78,7 +79,7 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
     vertexCode = vShaderStream.str();
     fragmentCode = fShaderStream.str();
   } catch (std::ifstream::failure e) {
-    std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+    LOG(ERROR) << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ";
   }
   const unsigned int vertexShader = LoadVertaxShader(vertexCode.c_str());
   const unsigned int fragmentShader = LoadFragmentShader(fragmentCode.c_str());

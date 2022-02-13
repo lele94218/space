@@ -2,7 +2,7 @@ CC = clang++
 INC = include
 # Use below if your OSX is using Intel's chip.
 # CFLAGS = -std=c++11 -stdlib=libc++ -lglfw -lglog
-CFLAGS = -std=c++11 -stdlib=libc++ -L/opt/homebrew/lib -lglfw -lglog
+CFLAGS = -std=c++11 -stdlib=libc++ -L/opt/homebrew/lib -lglfw -lglog -lassimp
 TARGET = ./build/main
 SRCS = $(wildcard *.cc)
 MAIN = main
