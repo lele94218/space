@@ -187,10 +187,18 @@ int main(int argc, char* argv[]) {
     // -----
     processInput(window);
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     model_shader.use();
+    // Model shader properties
+    model_shader.setVector3("light.position", glm::value_ptr(light_pos));
+    model_shader.setVector3("light.diffuse", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+    model_shader.setVector3("light.ambient", glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
+    model_shader.setVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+    model_shader.setVector3("view_pos", glm::value_ptr(camera.position()));
+    model_shader.setInt("material.diffuse", 0);
+    model_shader.setFloat("material.shininess", 32.0f);
     // View (Camera)
     glm::mat4 view = camera.GetViewMatrix();
     // Projection
