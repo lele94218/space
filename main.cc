@@ -119,6 +119,7 @@ int main(int argc, char* argv[]) {
 
   // load model
   Model backpack_model("assets/backpack/backpack.obj");
+  // Model backpack_model("assets/light_bulb/light_bulb.obj");
   Model light_model("assets/light_bulb/light_bulb.obj");
 
   // Configure OpenGL state
@@ -146,9 +147,9 @@ int main(int argc, char* argv[]) {
     model_shader.use();
     // Model shader properties
     model_shader.setVector3("light.position", glm::value_ptr(light_pos));
-    model_shader.setVector3("light.diffuse", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-    model_shader.setVector3("light.ambient", glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
-    model_shader.setVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+    model_shader.setVector3("light.diffuse", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
+    model_shader.setVector3("light.ambient", glm::value_ptr(glm::vec3(0.1f, 0.1f, 0.1f)));
+    model_shader.setVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
     model_shader.setVector3("view_pos", glm::value_ptr(camera.position()));
     model_shader.setInt("material.diffuse", 0);
     model_shader.setFloat("material.shininess", 32.0f);
