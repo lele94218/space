@@ -1,16 +1,11 @@
 #pragma once
 
-#include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 
 #include "shader.h"
-
-struct Texture {
-  unsigned int id;
-  std::string type;
-  std::string path;
-};
+#include "texture.h"
 
 struct Vertex {
   glm::vec3 position;

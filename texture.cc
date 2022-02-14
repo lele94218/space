@@ -4,55 +4,44 @@
 #include <glog/logging.h>
 #include <stab/stab_image.h>
 
-#define GL_ACTIVE_TEXTURE_TARGET(id) glActiveTexture(GL_TEXTURE##id)
-
-Texture::Texture(const std::string& image_path, ImageFormat format) {
-  unsigned int texture;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  // set the texture wrapping/filtering options (on the currently bound texture object)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // load and generate the texture
-  int width, height, nr_channels;
-  // TODO: some image is up-side down.
-  stbi_set_flip_vertically_on_load(true);
-  unsigned char* data = stbi_load(image_path.c_str(), &width, &height, &nr_channels, 0);
-  if (data) {
-    switch (format) {
-      case ImageFormat::PNG:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        break;
-      case ImageFormat::JPEG:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        break;
-      default:
-        LOG(FATAL) << "Unsupported image format: " << static_cast<int>(format);
-    }
-    glGenerateMipmap(GL_TEXTURE_2D);
-    stbi_image_free(data);
-  } else {
-    LOG(ERROR) << "Failed to load texutre.";
-  }
-  ID = texture;
+Texture::Texture(const std::string& filename,
+                 const std::string& directory,
+                 const std::string& type_name) {
+  const std::string file_path = directory + '/' + filename;
+  id = TextureFromFile(file_path);
+  type = type_name;
+  path = filename;
 }
 
-void Texture::use(int target_id) const {
-  switch(target_id) {
-    case 0:
-      GL_ACTIVE_TEXTURE_TARGET(0);
-      break;
-    case 1:
-      GL_ACTIVE_TEXTURE_TARGET(1);
-      break;
-    case 2:
-      GL_ACTIVE_TEXTURE_TARGET(2);
-      break;
-    // case 3-31 should be added manually.
-    default:
-      LOG(FATAL) << "Unsupported target id: " << target_id;
+unsigned int Texture::TextureFromFile(const std::string& file_path, bool gamma) {
+  unsigned int texture_id;
+  glGenTextures(1, &texture_id);
+
+  int width, height, num_channels;
+  unsigned char* data = stbi_load(file_path.c_str(), &width, &height, &num_channels, 0);
+  if (data) {
+    GLenum format;
+    if (num_channels == 1)
+      format = GL_RED;
+    else if (num_channels == 3)
+      format = GL_RGB;
+    else if (num_channels == 4)
+      format = GL_RGBA;
+
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+  } else {
+    LOG(ERROR) << "Texture failed to load at path: " << path;
+    stbi_image_free(data);
   }
-  glBindTexture(GL_TEXTURE_2D, ID);
+
+  return texture_id;
 }

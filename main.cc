@@ -25,8 +25,8 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-float lastX = SCR_WIDTH / 2.0;
-float lastY = SCR_HEIGHT / 2.0;
+float last_x = SCR_WIDTH / 2.0;
+float last_y = SCR_HEIGHT / 2.0;
 float fov = 45.0f;
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react
@@ -51,22 +51,22 @@ void processInput(GLFWwindow* window) {
   }
 }
 
-void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
+void mouseCallback(GLFWwindow* window, double pos_x, double pos_y) {
   if (first_mouse) {
-    lastX = xpos;
-    lastY = ypos;
+    last_x = pos_x;
+    last_y = pos_y;
     first_mouse = false;
   }
 
-  float xoffset = xpos - lastX;
-  float yoffset = lastY - ypos;  // reversed since y-coordinates go from bottom to top
-  lastX = xpos;
-  lastY = ypos;
-  camera.ProcessMouseMovement(xoffset, yoffset);
+  float x_offset = pos_x - last_x;
+  float y_offset = last_y - pos_y;  // reversed since y-coordinates go from bottom to top
+  last_x = pos_x;
+  last_y = pos_y;
+  camera.ProcessMouseMovement(x_offset, y_offset);
 }
 
-void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-  camera.ProcessMouseScroll(yoffset);
+void scrollCallback(GLFWwindow* window, double x_offset, double y_offset) {
+  camera.ProcessMouseScroll(y_offset);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -133,9 +133,9 @@ int main(int argc, char* argv[]) {
   // -----------
   while (!glfwWindowShouldClose(window)) {
     // Handle time
-    float currentFrame = glfwGetTime();
-    delta_time = currentFrame - last_frame;
-    last_frame = currentFrame;
+    float current_frame = glfwGetTime();
+    delta_time = current_frame - last_frame;
+    last_frame = current_frame;
     // input
     // -----
     processInput(window);
@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
     light_shader.setMatrix4("view", glm::value_ptr(view));
     model = glm::mat4(1.0f);
     model = glm::translate(model, light_pos);
-    model = glm::scale(model, glm::vec3(0.1f));  // a smaller cube
+    model = glm::scale(model, glm::vec3(0.05f));  // a smaller cube
     light_shader.setMatrix4("model", glm::value_ptr(model));
     // Render the light
     light_model.Draw(light_shader);

@@ -9,6 +9,7 @@
 
 #include "mesh.h"
 #include "shader.h"
+#include "texture.h"
 
 class Model {
  public:

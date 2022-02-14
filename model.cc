@@ -2,47 +2,6 @@
 
 #include <glad/glad.h>
 #include <glog/logging.h>
-#include <stab/stab_image.h>
-
-namespace {
-
-unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false) {
-  std::string filename(path);
-  filename = directory + '/' + filename;
-
-  unsigned int texture_id;
-  glGenTextures(1, &texture_id);
-
-  int width, height, num_channels;
-  unsigned char* data = stbi_load(filename.c_str(), &width, &height, &num_channels, 0);
-  if (data) {
-    GLenum format;
-    if (num_channels == 1)
-      format = GL_RED;
-    else if (num_channels == 3)
-      format = GL_RGB;
-    else if (num_channels == 4)
-      format = GL_RGBA;
-
-    glBindTexture(GL_TEXTURE_2D, texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    stbi_image_free(data);
-  } else {
-    LOG(ERROR) << "Texture failed to load at path: " << path;
-    stbi_image_free(data);
-  }
-
-  return texture_id;
-}
-
-}  // namespace
 
 void Model::Draw(Shader& shader) {
   for (unsigned int i = 0; i < meshes_.size(); i++) {
@@ -147,10 +106,7 @@ std::vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat,
     }
     if (!skip) {
       // if texture hasn't been loaded already, load it
-      Texture texture;
-      texture.id = TextureFromFile(str.C_Str(), directory_);
-      texture.type = type_name;
-      texture.path = str.C_Str();
+      Texture texture(str.C_Str(), directory_, type_name);
       textures.push_back(texture);
       textures_loaded_.push_back(texture);
     }

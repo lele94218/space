@@ -4,15 +4,13 @@
 
 #include "texture.h"
 
-enum class ImageFormat {
-  JPEG = 1,
-  PNG = 2,
-};
-
-class Texture {
+struct Texture {
  public:
-  unsigned int ID;
+  Texture(const std::string& filename, const std::string& directory, const std::string& type_name);
+  unsigned int id;
+  std::string type;
+  std::string path;
 
-  Texture(const std::string& image_path, ImageFormat format);
-  void use(int target_id) const;
+ private:
+  unsigned int TextureFromFile(const std::string& file_path, bool gamma = false);
 };
