@@ -55,27 +55,31 @@ void Mesh::Draw(const Shader& shader) const {
   unsigned int specular_num = 1;
   unsigned int normal_num = 1;
   unsigned int height_num = 1;
-  for (unsigned int i = 0; i < textures_.size(); i++) {
-    // active proper texture unit before binding
-    glActiveTexture(GL_TEXTURE0 + i);
-    // retrieve texture number (the N in diffuse_textureN)
-    std::string number;
-    const std::string& name = textures_[i].type;
-    if (name == "texture_diffuse") {
-      number = std::to_string(diffuse_num++);
-    } else if (name == "texture_specular") {
-      number = std::to_string(specular_num++);
-    } else if (name == "texture_normal") {
-      number = std::to_string(normal_num++);
-    } else if (name == "texture_height") {
-      number = std::to_string(height_num++);
+  if (textures_.empty()) {
+    shader.setInt("texture_sample", 0);
+  } else {
+    shader.setInt("texture_sample", 1);
+    for (unsigned int i = 0; i < textures_.size(); i++) {
+      // active proper texture unit before binding
+      glActiveTexture(GL_TEXTURE0 + i);
+      // retrieve texture number (the N in diffuse_textureN)
+      std::string number;
+      const std::string& name = textures_[i].type;
+      if (name == "texture_diffuse") {
+        number = std::to_string(diffuse_num++);
+      } else if (name == "texture_specular") {
+        number = std::to_string(specular_num++);
+      } else if (name == "texture_normal") {
+        number = std::to_string(normal_num++);
+      } else if (name == "texture_height") {
+        number = std::to_string(height_num++);
+      }
+      // now set the sampler to the correct texture unit
+      const std::string texture_name = name + number;
+      shader.setInt(texture_name, i);
+      // and finally bind the texture
+      glBindTexture(GL_TEXTURE_2D, textures_[i].id);
     }
-
-    // now set the sampler to the correct texture unit
-    const std::string texture_name = name + number;
-    shader.setInt(texture_name, i);
-    // and finally bind the texture
-    glBindTexture(GL_TEXTURE_2D, textures_[i].id);
   }
 
   // draw mesh

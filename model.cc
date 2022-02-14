@@ -90,10 +90,12 @@ Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
     }
     {
       glm::vec3 vec;
-      vec.x = mesh->mNormals[i].x;
-      vec.y = mesh->mNormals[i].y;
-      vec.z = mesh->mNormals[i].z;
-      vertex.normal = vec;
+      if (mesh->HasNormals()) {
+        vec.x = mesh->mNormals[i].x;
+        vec.y = mesh->mNormals[i].y;
+        vec.z = mesh->mNormals[i].z;
+        vertex.normal = vec;
+      }
     }
     {
       if (mesh->mTextureCoords[0]) {
@@ -125,7 +127,6 @@ Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
         LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
   }
-
   return Mesh(vertices, indices, textures);
 }
 
