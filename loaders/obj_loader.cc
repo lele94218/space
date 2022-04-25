@@ -1,30 +1,30 @@
-#include "model.h"
+#include "loaders/obj_loader.h"
 
-#include <glad/glad.h>
-#include <glog/logging.h>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 
-void Model::Draw(const Shader& shader) {
-  for (unsigned int i = 0; i < meshes_.size(); i++) {
-    meshes_[i].Draw(shader);
-  }
+#include <assimp/Importer.hpp>
+
+ObjLoader::ObjLoader(const std::string& path) {
+  root_dir_ = path.substr(0, path.find_last_of('/'));
 }
 
-void Model::LoadModel(const std::string& path) {
+void ObjLoader::Load() {
   Assimp::Importer importer;
   const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
     LOG(ERROR) << "ERROR::ASSIMP::" << importer.GetErrorString();
     return;
   }
-  directory_ = path.substr(0, path.find_last_of('/'));
   ProcessNode(scene->mRootNode, scene);
 }
 
-void Model::ProcessNode(aiNode* node, const aiScene* scene) {
+void ObjLoader::ProcessNode(aiNode* node, aiScene* scene) {
   // process all the node's meshes (if any)
   for (unsigned int i = 0; i < node->mNumMeshes; i++) {
     aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-    meshes_.push_back(ProcessMesh(mesh, scene));
+    MeshObject mesh_object = ProcessMesh(mesh, scene);
+    object_3d_.Add(std::make_unique<MeshObject>(mesh_object));
   }
   // then do the same for each of its children
   for (unsigned int i = 0; i < node->mNumChildren; i++) {
@@ -32,10 +32,12 @@ void Model::ProcessNode(aiNode* node, const aiScene* scene) {
   }
 }
 
-Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
+MeshObject Model::ProcessMesh(aiMesh* mesh, aiScene* scene) {
   std::vector<Vertex> vertices;
   std::vector<unsigned int> indices;
   std::vector<Texture> textures;
+  Geometry geometry;
+  Material material;
 
   for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
     Vertex vertex;
@@ -45,35 +47,32 @@ Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
       vec.x = mesh->mVertices[i].x;
       vec.y = mesh->mVertices[i].y;
       vec.z = mesh->mVertices[i].z;
-      vertex.position = vec;
+      geometry.position.push_back(vec);
     }
     {
-      glm::vec3 vec;
+      glm::vec3 vec(0.0f, 0.0f, 0.0f);
       if (mesh->HasNormals()) {
         vec.x = mesh->mNormals[i].x;
         vec.y = mesh->mNormals[i].y;
         vec.z = mesh->mNormals[i].z;
-        vertex.normal = vec;
       }
+      geometry.normal.push_back(vec);
     }
     {
+      glm::vec2 vec(0.0f, 0.0f);
       if (mesh->mTextureCoords[0]) {
         // The mesh contains texture coordinates
-        glm::vec2 vec;
         vec.x = mesh->mTextureCoords[0][i].x;
         vec.y = mesh->mTextureCoords[0][i].y;
-        vertex.tex_coords = vec;
-      } else {
-        vertex.tex_coords = glm::vec2(0.0f, 0.0f);
       }
+      geometry.uv.push_back(vec);
     }
-    vertices.push_back(vertex);
   }
   // process indices
   for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
     const aiFace& face = mesh->mFaces[i];
     for (unsigned int j = 0; j < face.mNumIndices; j++) {
-      indices.push_back(face.mIndices[j]);
+      geometry.index.push_back(face.mIndices[j]);
     }
   }
   // process material
@@ -86,30 +85,5 @@ Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
         LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
     textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
   }
-  return Mesh(vertices, indices, textures);
-}
-
-std::vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat,
-                                                 aiTextureType type,
-                                                 const std::string& type_name) {
-  std::vector<Texture> textures;
-  for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
-    aiString str;
-    mat->GetTexture(type, i, &str);
-    bool skip = false;
-    for (unsigned int j = 0; j < textures_loaded_.size(); j++) {
-      if (std::strcmp(textures_loaded_[j].path.data(), str.C_Str()) == 0) {
-        textures.push_back(textures_loaded_[j]);
-        skip = true;
-        break;
-      }
-    }
-    if (!skip) {
-      // if texture hasn't been loaded already, load it
-      Texture texture(str.C_Str(), directory_, type_name);
-      textures.push_back(texture);
-      textures_loaded_.push_back(texture);
-    }
-  }
-  return textures;
+  return Mesh(geometry, material);
 }

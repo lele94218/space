@@ -14,7 +14,7 @@
 class Model {
  public:
   Model(const std::string& path) { LoadModel(path); }
-  void Draw(Shader& shader);
+  void Draw(const Shader& shader);
 
  private:
   void LoadModel(const std::string& path);
