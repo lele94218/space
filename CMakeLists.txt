@@ -1,14 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(space)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 set(EXECUTABLE_OUTPUT_PATH "build")
 
-FILE(GLOB SOURCE_FILES *.cc)
+FILE(GLOB SOURCE_FILES
+  ${PROJECT_SOURCE_DIR}/*.cc
+  ${PROJECT_SOURCE_DIR}/src/core/*.cc
+  ${PROJECT_SOURCE_DIR}/src/loaders/*.cc)
 
 add_executable(space ${SOURCE_FILES})
 
-include_directories(include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories("/opt/homebrew/include")
 
 find_library(GLOG_LIB glog REQUIRED)

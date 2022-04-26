@@ -1,5 +1,11 @@
 #pragma once
 
+#include <glm/glm.hpp>
+#include <string>
+#include <vector>
+
+#include "object_3d.h"
+
 struct Geometry {
   std::vector<glm::vec3> position;
   std::vector<glm::vec3> normal;
@@ -9,7 +15,8 @@ struct Geometry {
 
 struct Material {
   bool flip_y = true;
-  std::string texture_path;
+  std::string map_texture_path;
+  std::string metalness_map_texture_path;
 };
 
 class MeshObject : public Object3D {
