@@ -1,4 +1,8 @@
 build/
+lib/
+space
+main
+*.a
 
 # General
 .DS_Store
@@ -28,13 +32,13 @@ Temporary Items
 .apdisk
 
 # CMake
+*.cmake
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
 Makefile
-cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
