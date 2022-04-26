@@ -10,6 +10,7 @@ brew install glog
 
 Then, under the repo directory:
 ```
+cmake .
 make
-./build/main
+./main
 ```
