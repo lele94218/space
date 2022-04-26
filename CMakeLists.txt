@@ -12,12 +12,24 @@ FILE(GLOB SOURCE_FILES
 add_executable(space ${SOURCE_FILES})
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories("/opt/homebrew/include")
 
-find_library(GLOG_LIB glog REQUIRED)
-find_library(GLFW_LIB glfw REQUIRED)
 find_library(ASSIMP_LIB assimp REQUIRED)
-
-target_link_libraries(space ${GLOG_LIB})
-target_link_libraries(space ${GLFW_LIB})
 target_link_libraries(space ${ASSIMP_LIB})
+
+find_package(glfw3 REQUIRED)
+target_link_libraries(space glfw)
+
+find_package(OpenGL REQUIRED)
+target_link_libraries (space OpenGL::GL)
+
+find_package (Glog REQUIRED)
+target_link_libraries (space glog::glog)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
