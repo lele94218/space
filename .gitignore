@@ -1,6 +1,7 @@
 build/
 lib/
 space
+space_test
 main
 *.a
 
