@@ -10,13 +10,16 @@
 
 class ObjLoader {
  public:
-  ObjLoader(const std::string& path);
+  ObjLoader(const std::string& file_path);
+
   void Load();
+  void ProcessNode(aiNode* node, const aiScene* scene);
+
+  std::unique_ptr<Object3D> object_3d_;
 
  private:
-  void ProcessNode(aiNode* node, const aiScene* scene);
-  MeshObject ProcessMesh(aiMesh* mesh, const aiScene* scene);
+  std::unique_ptr<MeshObject> ProcessMesh(aiMesh* mesh, const aiScene* scene);
 
   std::string root_dir_;
-  std::unique_ptr<Object3D> object_3d_;
+  std::string file_name_;
 };

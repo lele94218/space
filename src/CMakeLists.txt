@@ -5,7 +5,9 @@ set (CMAKE_CXX_STANDARD 14)
 
 FILE(GLOB SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/core/*.cc
-  ${PROJECT_SOURCE_DIR}/loaders/*.cc)
+  ${PROJECT_SOURCE_DIR}/errors/*.cc
+  ${PROJECT_SOURCE_DIR}/loaders/*.cc
+  ${PROJECT_SOURCE_DIR}/renders/*.cc)
 
 add_library(${PROJECT_NAME} ${SOURCE_FILES})
 
