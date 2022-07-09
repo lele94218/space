@@ -33,7 +33,6 @@ GLBindingState::GLBindingState(const Geometry& geometry) {
   // Unbind all
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
-  LOG(ERROR) << "state";
 }
 
 unsigned int GLBindingState::MakeBuffer(unsigned int target,

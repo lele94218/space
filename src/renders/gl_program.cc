@@ -20,7 +20,6 @@ GLShader::GLShader(GLenum shader_type, const std::string& shader_source) {
   }
   CHECK(shader) << "Failded to create shader.";
   shader_ = shader;
-  LOG(ERROR) << "shader";
 }
 
 GLShader::~GLShader() { glDeleteShader(shader_); }

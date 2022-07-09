@@ -8,9 +8,10 @@ FILE(GLOB SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/glad.cc
   ${PROJECT_SOURCE_DIR}/stab_image.cc)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 include_directories(${PROJECT_SOURCE_DIR}/deps)
+
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} space)
 

@@ -81,7 +81,6 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     aiMaterial* ai_material = scene->mMaterials[mesh->mMaterialIndex];
     aiString ai_str;
     if (ai_material->GetTextureCount(aiTextureType_DIFFUSE)) {
-      LOG(ERROR) << "no";
       ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &ai_str);
       material.map_texture_path = root_dir_ + "/" + ai_str.C_Str();
     }
@@ -89,6 +88,7 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
       ai_material->GetTexture(aiTextureType_SPECULAR, 0, &ai_str);
       material.metalness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
     }
+    material.shader_name = "model_shader";
   }
   return std::make_unique<MeshObject>(geometry, material);
 }
