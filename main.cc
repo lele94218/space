@@ -19,12 +19,19 @@ int main(int argc, char* argv[]) {
   // SDL_CreateWindow
   SDL_Window* window = nullptr;
 
+  const unsigned int SCR_WIDTH = 800;
+  const unsigned int SCR_HEIGHT = 600;
+  float last_time = 0.0f;
+  float total_time = 0.0f;
+  int frame_count = 0;
+
   // Initialize the video subsystem. If it returns less than 1, then an error code will be received.
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
     std::cout << "SDL could not be initialized: " << SDL_GetError();
   } else {
     std::cout << "SDL video system is ready to go\n";
   }
+  SDL_SetRelativeMouseMode(SDL_TRUE);
   // Before we create our window, specify OpenGL version
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -45,7 +52,7 @@ int main(int argc, char* argv[]) {
 
   // Request a window to be created for our platform The parameters are for the title, x and y
   // position, and the width and height of the window.
-  window = SDL_CreateWindow("Space", 0, 0, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+  window = SDL_CreateWindow("Space", 0, 0, SCR_WIDTH, SCR_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
 
   // OpenGL setup the graphics context
   SDL_GLContext context;
@@ -67,10 +74,6 @@ int main(int argc, char* argv[]) {
   GLRenderer render;
   scene.Add(std::move(loader.object_3d_));
 
-  float last_time = 0.0f;
-  float total_time = 0.0f;
-  int frame_count = 0;
-
   // Infinite loop for our application
   bool gameIsRunning = true;
   while (gameIsRunning) {
@@ -86,7 +89,7 @@ int main(int argc, char* argv[]) {
       float fps = frame_count / total_time;
       frame_count = 0;
       total_time = 0;
-      LOG(ERROR) << std::fixed << "FPS: " << fps;
+//      LOG(ERROR) << std::fixed << "FPS: " << fps;
     }
 
     // Retrieve the state of all of the keys Then we can query the scan code of one or more keys
@@ -105,15 +108,18 @@ int main(int argc, char* argv[]) {
       camera.ProcessKeyboard(CameraMovement::RIGHT, delta_time);
     }
 
+    int x_offset, y_offset;
+    SDL_GetRelativeMouseState(&x_offset, &y_offset);
+
+    // reversed since y-coordinates go from bottom to top
+    camera.ProcessMouseMovement(x_offset, -y_offset);
+
     // Start our event loop
     while (SDL_PollEvent(&event)) {
       // Handle each specific event
       if (event.type == SDL_QUIT) {
         gameIsRunning = false;
       }
-      //      if (event.type == SDL_MOUSEMOTION) {
-      //        std::cout << "mouse has been moved\n";
-      //      }
     }
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
