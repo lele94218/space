@@ -25,6 +25,13 @@ target_link_libraries (${PROJECT_NAME} OpenGL::GL)
 find_package (Glog REQUIRED)
 target_link_libraries (${PROJECT_NAME} glog::glog)
 
+# Not work if run on macOS
+# find_package(SDL2 REQUIRED)
+# target_link_libraries (${PROJECT_NAME} ${SDL2_LIBRARIES})
+# message(${SDL2_LIBRARIES})
+# include_directories("/Library/Frameworks/SDL2.framework/Headers")
+# target_link_libraries (${PROJECT_NAME} "-framework SDL2")
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${PROJECT_SOURCE_DIR}/include
 )
