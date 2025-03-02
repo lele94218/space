@@ -12,8 +12,12 @@ include_directories(deps)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-include_directories("/Library/Frameworks/SDL2.framework/Headers")
-target_link_libraries (${PROJECT_NAME} "-framework SDL2")
+include_directories("/opt/homebrew/include/SDL2")
+find_library(SDL2_LIBRARY SDL2)
+if(NOT SDL2_LIBRARY)
+    message(FATAL_ERROR "SDL2 library not found")
+endif()
+target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY})
 
 target_link_libraries(${PROJECT_NAME} space)
 
