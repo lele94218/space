@@ -52,4 +52,4 @@ make -j4
 
 ## Status
 
-Active development resumed in 2026. Originally built in 2023 without AI assistance — now continuing with AI collaboration.
+Active development resumed in 2026.
