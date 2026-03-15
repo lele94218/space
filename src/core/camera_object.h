@@ -42,6 +42,14 @@ class CameraObject : public Object3D {
   float zoom() const { return zoom_; }
   glm::vec3 position() const { return position_; }
 
+  void Reset() {
+    position_ = glm::vec3(0.0f, 0.0f, 10.0f);
+    worldUp_   = glm::vec3(0.0f, 1.0f, 0.0f);
+    yaw_   = -90.0f;
+    pitch_ = 0.0f;
+    UpdateCameraVectors();
+  }
+
  private:
   // calculates the front vector from the Camera's (updated) Euler Angles
   void UpdateCameraVectors();

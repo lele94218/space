@@ -124,11 +124,17 @@ int main(int argc, char* argv[]) {
       camera.ProcessKeyboard(CameraMovement::RIGHT, delta_time);
     }
 
-    int x_offset, y_offset;
-    SDL_GetRelativeMouseState(&x_offset, &y_offset);
-
-    // reversed since y-coordinates go from bottom to top
-    camera.ProcessMouseMovement(x_offset, -y_offset);
+    // Only rotate camera when ImGui doesn't want the mouse
+    if (!io.WantCaptureMouse) {
+      int x_offset, y_offset;
+      SDL_GetRelativeMouseState(&x_offset, &y_offset);
+      // reversed since y-coordinates go from bottom to top
+      camera.ProcessMouseMovement(x_offset, -y_offset);
+    } else {
+      // Drain relative mouse state so it doesn't accumulate
+      int x_offset, y_offset;
+      SDL_GetRelativeMouseState(&x_offset, &y_offset);
+    }
 
     // Start our event loop
     while (SDL_PollEvent(&event)) {
@@ -149,6 +155,10 @@ int main(int argc, char* argv[]) {
     ImGui::Text("FPS: %.1f", io.Framerate);
     ImGui::Text("Camera pos: (%.2f, %.2f, %.2f)",
       camera.position().x, camera.position().y, camera.position().z);
+    if (ImGui::Button("Reset Camera")) {
+      camera.Reset();
+    }
+    ImGui::Text("WASD: move  Mouse: look");
     ImGui::End();
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
