@@ -2,6 +2,9 @@
 #include <glad/glad.h>
 #include <glog/logging.h>
 #include <stab/stab_image.h>
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_opengl3.h>
 
 #include <iostream>
 
@@ -62,9 +65,21 @@ int main(int argc, char* argv[]) {
   // Setup our function pointers
   gladLoadGLLoader(SDL_GL_GetProcAddress);
 
+  // VSync
+  SDL_GL_SetSwapInterval(1);
+
   // Configure OpenGL state
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_MULTISAMPLE);
+
+  // ImGui setup
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  ImGui::StyleColorsDark();
+  ImGui_ImplSDL2_InitForOpenGL(window, context);
+  ImGui_ImplOpenGL3_Init("#version 330 core");
 
   // camera
   CameraObject camera;
@@ -117,22 +132,42 @@ int main(int argc, char* argv[]) {
 
     // Start our event loop
     while (SDL_PollEvent(&event)) {
+      ImGui_ImplSDL2_ProcessEvent(&event);
       // Handle each specific event
       if (event.type == SDL_QUIT) {
         gameIsRunning = false;
       }
     }
 
+    // ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    // Debug panel
+    ImGui::Begin("Debug");
+    ImGui::Text("FPS: %.1f", io.Framerate);
+    ImGui::Text("Camera pos: (%.2f, %.2f, %.2f)",
+      camera.position().x, camera.position().y, camera.position().z);
+    ImGui::End();
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     render.Render(scene, camera);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     SDL_GL_SwapWindow(window);
   }
 
   // We destroy our window. We are passing in the pointer that points to the memory allocated by the
   // 'SDL_CreateWindow' function. Remember, this is a 'C-style' API, we don't have destructors.
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
+
   SDL_DestroyWindow(window);
 
   SDL_Quit();
