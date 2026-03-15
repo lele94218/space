@@ -72,16 +72,35 @@ test/                 # Google Test unit tests
 ## Development Notes
 
 - C++14 standard
-- No external math library — uses raw arrays/structs (consider adding GLM)
+- GLM already used for math (vec3, mat4)
 - SDL2 handles window creation and mouse/keyboard input
 - Camera orbit implemented via mouse drag in `main.cc`
 - VSync is NOT enabled (FPS uncapped, ~2000+ in windowed mode)
 
-## Next Steps / Ideas
+## Roadmap
 
-- [ ] Add GLM for cleaner math (vec3, mat4)
-- [ ] PBR materials (roughness, metallic, normal maps)
-- [ ] Shadow mapping
-- [ ] Skybox / IBL
-- [ ] ImGui debug overlay
-- [ ] Frame time cap / VSync
+### 🔴 P0 — 基础设施
+- [ ] VSync / 帧率控制 — `SDL_GL_SetSwapInterval(1)` 防止烤 CPU
+- [ ] ImGui 集成 — 调试面板，后续所有工作都依赖它
+
+### 🟠 P1 — 渲染核心
+- [ ] Phong / Blinn-Phong 光照 — 点光源、方向光、环境光
+- [ ] 多光源支持 — Renderer 支持 Light 节点
+- [ ] 法线贴图 (Normal Map)
+- [ ] PBR 材质 — roughness + metallic + albedo
+
+### 🟡 P2 — 质量提升
+- [ ] Shadow Mapping — 方向光阴影
+- [ ] Skybox / IBL — 环境光照
+- [ ] 后处理框架 — Framebuffer → 屏幕四边形 → shader 链
+- [ ] HDR + Tone Mapping
+
+### 🟢 P3 — 工程质量
+- [ ] ECS 架构重构
+- [ ] 资源管理 — 纹理/Mesh 缓存
+- [ ] 跨平台 CMake — Linux/Windows 构建验证
+
+### 🔵 P4 — 游戏化
+- [ ] 物理集成 — Bullet 或 Jolt
+- [ ] 音频 — SDL_mixer 或 OpenAL
+- [ ] Scripting — Lua
