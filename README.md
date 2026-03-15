@@ -1,24 +1,55 @@
-Installation
-------------
+# Space — C++ OpenGL 3D Renderer
 
-### MacOS
+A lightweight 3D rendering engine built with OpenGL, inspired by the architecture of [Three.js](https://threejs.org/).
 
-#### OpenGL Install
+## Features
+
+- **Scene graph** — `Object3D`, `MeshObject`, `SceneObject` hierarchy
+- **Geometry & Materials** — decoupled mesh data from shading
+- **Camera** — `CameraObject` with view/projection support
+- **Renderer** — `GLRenderer` with OpenGL backend (VAO/VBO, shader programs, textures, binding state)
+- **Model loading** — via [Assimp](https://github.com/assimp/assimp) (`.obj`, `.fbx`, etc.)
+- **Mouse input** — camera orbit/pan via SDL2
+- **GLSL shaders** — multiple shader programs (texture, material, lighting, model)
+
+## Architecture
 
 ```
-brew install glfw
-brew install glog
+src/
+├── core/         # Object3D, MeshObject, SceneObject, Camera, Geometry, Material
+├── renders/      # GLRenderer, GLProgram, GLTexture, GLBindingState, GLGlobalResources
+├── loaders/      # Asset loaders (Assimp wrapper)
+└── errors/       # Error handling
+shaders/          # GLSL vertex & fragment shaders
 ```
 
-Then, under the repo directory:
+## Requirements
+
+- macOS (Apple Silicon / Intel)
+- CMake ≥ 3.5
+- C++14
+
+## Installation
+
+```bash
+brew install cmake glfw glog assimp
 ```
-cmake .
-make
+
+## Build & Run
+
+```bash
+git clone https://github.com/lele94218/space.git
+cd space
+cmake . -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+make -j4
 ./main
 ```
 
-#### SDL2 Install
+## Controls
 
-Download release version [SDL2](https://www.libsdl.org/download-2.0.php). Then
-move folder `SDL2.framework` to
-`/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks`
+- **Mouse drag** — orbit camera
+- **Q / ESC** — quit
+
+## Status
+
+Active development resumed in 2026. Originally built in 2023 without AI assistance — now continuing with AI collaboration.

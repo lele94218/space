@@ -19,8 +19,8 @@ int main(int argc, char* argv[]) {
   // SDL_CreateWindow
   SDL_Window* window = nullptr;
 
-  const unsigned int SCR_WIDTH = 2560;
-  const unsigned int SCR_HEIGHT = 1600;
+  const unsigned int SCR_WIDTH = 900;
+  const unsigned int SCR_HEIGHT = 600;
   float last_time = 0.0f;
   float total_time = 0.0f;
   int frame_count = 0;
@@ -52,8 +52,8 @@ int main(int argc, char* argv[]) {
 
   // Request a window to be created for our platform The parameters are for the title, x and y
   // position, and the width and height of the window.
-  window = SDL_CreateWindow("Space", 0, 0, SCR_WIDTH, SCR_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
-  SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+  window = SDL_CreateWindow("Space", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCR_WIDTH, SCR_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+  // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
 
   // OpenGL setup the graphics context
   SDL_GLContext context;

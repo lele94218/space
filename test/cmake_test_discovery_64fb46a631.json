@@ -1,0 +1,17 @@
+{
+  "tests": 1,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "ObjLoaderTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "LoadLightBulb",
+          "file": "\/tmp\/space\/test\/obj_loader_test.cc",
+          "line": 6
+        }
+      ]
+    }
+  ]
+}
