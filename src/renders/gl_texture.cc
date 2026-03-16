@@ -5,8 +5,10 @@
 #include <stab/stab_image.h>
 
 GLTexture::GLTexture(const Material& material) {
-  texture_id_ = TextureFromFile(material.map_texture_path);
-  // type_ = type_name;
+  if (!material.map_texture_path.empty())
+    diffuse_id_ = TextureFromFile(material.map_texture_path);
+  if (!material.metalness_map_texture_path.empty())
+    specular_id_ = TextureFromFile(material.metalness_map_texture_path);
   path_ = material.map_texture_path;
 }
 

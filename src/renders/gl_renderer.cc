@@ -100,11 +100,20 @@ void GLRenderer::Draw(const GLBindingState& binding_state,
                       const GLTexture& texture,
                       const CameraObject& camera,
                       unsigned int index_size) const {
-  // active proper texture unit before binding
+  // Bind diffuse texture to unit 0
   glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
   program.SetInt("texture_diffuse1", 0);
-  // and finally bind the texture
-  glBindTexture(GL_TEXTURE_2D, texture.id());
+
+  // Bind specular texture to unit 1 (if available)
+  if (texture.has_specular()) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture.specular_id());
+    program.SetInt("texture_specular1", 1);
+    program.SetInt("texture_sample", 1);
+  } else {
+    program.SetInt("texture_sample", 0);
+  }
 
   glBindVertexArray(binding_state.vao());
   glDrawElements(GL_TRIANGLES, index_size, GL_UNSIGNED_INT, 0);

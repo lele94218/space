@@ -46,10 +46,10 @@ void main() {
     diffuse = light.diffuse * diff * default_color;;
   }
 
-  // specular
+  // specular (Blinn-Phong: halfway vector instead of reflect)
   vec3 view_dir = normalize(view_pos - frag_pos);
-  vec3 reflect_dir = reflect(-light_dir, norm);
-  float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.shininess);
+  vec3 halfway_dir = normalize(light_dir + view_dir);
+  float spec = pow(max(dot(norm, halfway_dir), 0.0), material.shininess);
   if (texture_sample == 1) {
     specular = light.specular * spec * texture(texture_specular1, tex_coords).rgb;
   } else {

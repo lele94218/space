@@ -8,12 +8,14 @@ class GLTexture {
  public:
   GLTexture(const Material& material);
 
-  unsigned int id() const { return texture_id_; }
+  unsigned int diffuse_id() const { return diffuse_id_; }
+  unsigned int specular_id() const { return specular_id_; }
+  bool has_specular() const { return specular_id_ != 0; }
 
  private:
   unsigned int TextureFromFile(const std::string& file_path, bool gamma = false);
 
-  unsigned int texture_id_;
-  std::string type_;
+  unsigned int diffuse_id_ = 0;
+  unsigned int specular_id_ = 0;
   std::string path_;
 };
