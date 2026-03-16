@@ -170,8 +170,8 @@ int main(int argc, char* argv[]) {
       camera.Reset();
     }
     ImGui::Separator();
-    ImGui::Text("右键拖动: 旋转视角");
-    ImGui::Text("WASD: 移动");
+    ImGui::Text("Right-drag: rotate view");
+    ImGui::Text("WASD: move");
     ImGui::End();
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
