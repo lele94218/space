@@ -27,6 +27,7 @@ class GLProgram {
   void SetFloat(const std::string& name, float value) const;
   void SetMatrix4(const std::string& name, const float* value) const;
   void SetVector3(const std::string& name, const float* value) const;
+  void SetVector4(const std::string& name, const float* value) const;
   unsigned int GetAttributeLocation(const std::string& name) const;
 
  private:

@@ -1,5 +1,6 @@
 #include "obj_loader.h"
 
+#include <assimp/GltfMaterial.h>
 #include <assimp/postprocess.h>
 #include <glog/logging.h>
 
@@ -132,6 +133,20 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     if (material.ao_map_texture_path.empty())
       resolve(aiTextureType_AMBIENT,         material.ao_map_texture_path);
 
+    // Read alpha mode (glTF)
+    {
+      aiString alpha_mode_str;
+      if (ai_material->Get(AI_MATKEY_GLTF_ALPHAMODE, alpha_mode_str) == AI_SUCCESS) {
+        std::string mode = alpha_mode_str.C_Str();
+        if (mode == "BLEND") material.alpha_mode = 2;
+        else if (mode == "MASK") material.alpha_mode = 1;
+        else material.alpha_mode = 0;
+      }
+      float cutoff = 0.5f;
+      if (ai_material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, cutoff) == AI_SUCCESS)
+        material.alpha_cutoff = cutoff;
+    }
+
     // Read base color factor (glTF PBR)
     aiColor4D base_color(1.f, 1.f, 1.f, 1.f);
     if (ai_material->Get(AI_MATKEY_BASE_COLOR, base_color) == AI_SUCCESS) {
@@ -148,11 +163,10 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     material.shader_name = "model_shader";
     LOG(INFO) << "Material[" << material.id << "] "
               << " diffuse=" << material.map_texture_path
-              << " specular=" << material.metalness_map_texture_path
               << " normal=" << material.normal_map_texture_path
-              << " roughness=" << material.roughness_map_texture_path
-              << " ao=" << material.ao_map_texture_path
-              << " embedded_count=" << material.embedded_textures.size();
+              << " alpha=" << material.alpha_mode
+              << " base_color=[" << material.base_color[0] << ","
+              << material.base_color[1] << "," << material.base_color[2] << "]";
   }
   return std::make_unique<MeshObject>(geometry, material);
 }

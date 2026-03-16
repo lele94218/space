@@ -77,13 +77,30 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
   program_ptr->SetMatrix4("view",       glm::value_ptr(view));
   program_ptr->SetMatrix4("model",      glm::value_ptr(model));
 
+  // Two-pass: opaque first, then alpha-blended (correct transparency layering)
+  glDisable(GL_BLEND);
   for (const Object3D* object : render_list_) {
     for (int index = 0; index < object->size(); ++index) {
       const Object3D* sub = object->get(index);
-      if (dynamic_cast<const MeshObject*>(sub))
-        RenderMeshObject(static_cast<const MeshObject*>(sub), camera);
+      if (auto* mesh = dynamic_cast<const MeshObject*>(sub)) {
+        if (mesh->material().alpha_mode == 0)
+          RenderMeshObject(mesh, camera);
+      }
     }
   }
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  for (const Object3D* object : render_list_) {
+    for (int index = 0; index < object->size(); ++index) {
+      const Object3D* sub = object->get(index);
+      if (auto* mesh = dynamic_cast<const MeshObject*>(sub)) {
+        if (mesh->material().alpha_mode != 0)
+          RenderMeshObject(mesh, camera);
+      }
+    }
+  }
+  glDisable(GL_BLEND);
 }
 
 void GLRenderer::SetupMeshObject(const MeshObject* mesh_object) const {
@@ -134,7 +151,7 @@ void GLRenderer::DrawBlinnPhong(const GLBindingState& binding_state,
                                 const Material& material,
                                 unsigned int index_size) const {
   // Pass base color factor (modulates diffuse or serves as fallback color)
-  program.SetVector3("base_color_factor", material.base_color);
+  program.SetVector4("base_color_factor", material.base_color);
 
   // unit 0: diffuse — texture_sample=1 if diffuse exists
   if (texture.diffuse_id()) {
@@ -173,7 +190,7 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
                          const Material& material,
                          unsigned int index_size) const {
   // Pass base color factor
-  program.SetVector3("base_color_factor", material.base_color);
+  program.SetVector4("base_color_factor", material.base_color);
 
   // unit 0: albedo
   glActiveTexture(GL_TEXTURE0);

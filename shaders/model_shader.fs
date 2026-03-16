@@ -26,7 +26,7 @@ uniform Material material;
 uniform Light light;
 uniform vec3 view_pos;
 uniform vec3 default_color = vec3(1.0, 1.0, 1.0);
-uniform vec3 base_color_factor = vec3(1.0, 1.0, 1.0);
+uniform vec4 base_color_factor = vec4(1.0, 1.0, 1.0, 1.0);
 uniform int texture_sample = 1;
 uniform int use_normal_map = 0;
 
@@ -48,9 +48,9 @@ void main() {
   // Resolve albedo: texture * base_color_factor (or just factor if no texture)
   vec3 albedo;
   if (texture_sample == 1) {
-    albedo = texture(texture_diffuse1, tex_coords).rgb * base_color_factor;
+    albedo = texture(texture_diffuse1, tex_coords).rgb * base_color_factor.rgb;
   } else {
-    albedo = base_color_factor;
+    albedo = base_color_factor.rgb;
   }
 
   // Ambient
@@ -72,5 +72,6 @@ void main() {
   }
 
   vec3 result = ambient + diffuse + specular;
-  frag_color = vec4(result, 1.0);
+  float alpha = (texture_sample == 1) ? texture(texture_diffuse1, tex_coords).a : base_color_factor.a;
+  frag_color = vec4(result, alpha);
 }

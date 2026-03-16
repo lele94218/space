@@ -23,6 +23,10 @@ class Material {
   // glTF PBR base color factor (multiplied with albedo texture or used alone)
   float base_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
+  // Alpha mode: 0=OPAQUE, 1=MASK, 2=BLEND
+  int alpha_mode = 0;
+  float alpha_cutoff = 0.5f;
+
  private:
   static int unique_id_;
 };

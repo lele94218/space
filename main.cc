@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
     return models;
   };
   std::vector<std::string> model_list = scan_models();
-  int selected_model = 0;  // index into model_list
-  std::string current_model = model_list.empty() ? "" : model_list[0];
+  int selected_model = 0;
+  std::string current_model = model_list.empty() ? "" : model_list[selected_model];
 
   // Load a model into the scene, clearing previous resources
   auto gl_renderer_ptr = std::make_unique<GLRenderer>();

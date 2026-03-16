@@ -82,6 +82,10 @@ void GLProgram::SetVector3(const std::string& name, const float* value) const {
   glUniform3fv(glGetUniformLocation(program_, name.c_str()), 1, value);
 }
 
+void GLProgram::SetVector4(const std::string& name, const float* value) const {
+  glUniform4fv(glGetUniformLocation(program_, name.c_str()), 1, value);
+}
+
 unsigned int GLProgram::GetAttributeLocation(const std::string& name) const {
   return glGetAttribLocation(program_, name.c_str());
 }
