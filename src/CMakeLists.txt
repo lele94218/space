@@ -7,7 +7,8 @@ FILE(GLOB SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/core/*.cc
   ${PROJECT_SOURCE_DIR}/errors/*.cc
   ${PROJECT_SOURCE_DIR}/loaders/*.cc
-  ${PROJECT_SOURCE_DIR}/renders/*.cc)
+  ${PROJECT_SOURCE_DIR}/renders/*.cc
+  ${PROJECT_SOURCE_DIR}/renders/gl_framebuffer.cc)
 
 add_library(${PROJECT_NAME} ${SOURCE_FILES})
 
