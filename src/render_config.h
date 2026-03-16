@@ -15,6 +15,6 @@ struct RenderConfig {
   float pbr_roughness = 0.5f;
 
   // Light
-  float light_intensity = 30.0f;
-  float light_pos[3]    = {5.0f, 5.0f, 5.0f};
+  float light_intensity = 100.0f;
+  float light_pos[3]    = {3.0f, 5.0f, 5.0f};
 };

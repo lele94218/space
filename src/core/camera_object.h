@@ -18,7 +18,7 @@ enum class CameraMovement {
 class CameraObject : public Object3D {
  public:
   // constructor with vectors
-  CameraObject(glm::vec3 position = glm::vec3(0.0f, 0.0f, 10.0f),
+  CameraObject(glm::vec3 position = glm::vec3(0.0f, 1.5f, 1.2f),
                glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
                float yaw = -90.0f,
                float pitch = 0.0f);
@@ -43,7 +43,7 @@ class CameraObject : public Object3D {
   glm::vec3 position() const { return position_; }
 
   void Reset() {
-    position_ = glm::vec3(0.0f, 0.0f, 10.0f);
+    position_ = glm::vec3(0.0f, 1.5f, 1.2f);
     worldUp_   = glm::vec3(0.0f, 1.0f, 0.0f);
     yaw_   = -90.0f;
     pitch_ = 0.0f;
