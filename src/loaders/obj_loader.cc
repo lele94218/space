@@ -14,7 +14,10 @@ ObjLoader::ObjLoader(const std::string& file_path) {
 void ObjLoader::Load() {
   Assimp::Importer importer;
   const std::string file_path = root_dir_ + "/" + file_name_;
-  const aiScene* scene = importer.ReadFile(file_path, aiProcess_Triangulate | aiProcess_FlipUVs);
+  const aiScene* scene = importer.ReadFile(file_path,
+    aiProcess_Triangulate |
+    aiProcess_FlipUVs |
+    aiProcess_CalcTangentSpace);  // auto-compute tangents for normal mapping
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
     LOG(ERROR) << "ERROR::ASSIMP::" << importer.GetErrorString();
     return;
@@ -61,11 +64,19 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     {
       glm::vec2 vec(0.0f, 0.0f);
       if (mesh->mTextureCoords[0]) {
-        // The mesh contains texture coordinates
         vec.x = mesh->mTextureCoords[0][i].x;
         vec.y = mesh->mTextureCoords[0][i].y;
       }
       vertex.uv = vec;
+    }
+    {
+      glm::vec3 vec(0.0f, 0.0f, 0.0f);
+      if (mesh->HasTangentsAndBitangents()) {
+        vec.x = mesh->mTangents[i].x;
+        vec.y = mesh->mTangents[i].y;
+        vec.z = mesh->mTangents[i].z;
+      }
+      vertex.tangent = vec;
     }
     geometry.vertices.push_back(vertex);
   }
@@ -87,6 +98,14 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     if (ai_material->GetTextureCount(aiTextureType_SPECULAR)) {
       ai_material->GetTexture(aiTextureType_SPECULAR, 0, &ai_str);
       material.metalness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    }
+    if (ai_material->GetTextureCount(aiTextureType_NORMALS)) {
+      ai_material->GetTexture(aiTextureType_NORMALS, 0, &ai_str);
+      material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    } else if (ai_material->GetTextureCount(aiTextureType_HEIGHT)) {
+      // .obj files store normal maps under HEIGHT
+      ai_material->GetTexture(aiTextureType_HEIGHT, 0, &ai_str);
+      material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
     }
     material.shader_name = "model_shader";
   }

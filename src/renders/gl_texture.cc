@@ -9,6 +9,8 @@ GLTexture::GLTexture(const Material& material) {
     diffuse_id_ = TextureFromFile(material.map_texture_path);
   if (!material.metalness_map_texture_path.empty())
     specular_id_ = TextureFromFile(material.metalness_map_texture_path);
+  if (!material.normal_map_texture_path.empty())
+    normal_id_ = TextureFromFile(material.normal_map_texture_path);
   path_ = material.map_texture_path;
 }
 

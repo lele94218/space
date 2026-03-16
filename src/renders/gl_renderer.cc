@@ -114,6 +114,15 @@ void GLRenderer::Draw(const GLBindingState& binding_state,
   } else {
     program.SetInt("texture_sample", 0);
   }
+  // Bind normal map to unit 2 (if available)
+  if (texture.has_normal()) {
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, texture.normal_id());
+    program.SetInt("texture_normal1", 2);
+    program.SetInt("use_normal_map", 1);
+  } else {
+    program.SetInt("use_normal_map", 0);
+  }
 
   glBindVertexArray(binding_state.vao());
   glDrawElements(GL_TRIANGLES, index_size, GL_UNSIGNED_INT, 0);

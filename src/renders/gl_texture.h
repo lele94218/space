@@ -10,12 +10,15 @@ class GLTexture {
 
   unsigned int diffuse_id() const { return diffuse_id_; }
   unsigned int specular_id() const { return specular_id_; }
+  unsigned int normal_id() const { return normal_id_; }
   bool has_specular() const { return specular_id_ != 0; }
+  bool has_normal() const { return normal_id_ != 0; }
 
  private:
   unsigned int TextureFromFile(const std::string& file_path, bool gamma = false);
 
   unsigned int diffuse_id_ = 0;
   unsigned int specular_id_ = 0;
+  unsigned int normal_id_ = 0;
   std::string path_;
 };
