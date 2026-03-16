@@ -13,16 +13,10 @@
 #include "src/core/scene_object.h"
 #include "src/errors/gl_error.h"
 #include "src/loaders/obj_loader.h"
+#include "src/render_config.h"
 #include "src/renders/gl_framebuffer.h"
 #include "src/renders/gl_renderer.h"
 #include "src/renders/i_renderer.h"
-
-// Render configuration — controls the rendering pipeline at runtime
-struct RenderConfig {
-  bool msaa_enabled = true;
-  int  msaa_samples = 8;    // options: 1, 2, 4, 8
-  bool blinn_phong  = true; // (future: toggle in shader via uniform)
-};
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -83,11 +77,13 @@ int main(int argc, char* argv[]) {
   ObjLoader loader("assets/backpack/backpack.obj");
   loader.Load();
   SceneObject scene;
-  std::unique_ptr<IRenderer> renderer = std::make_unique<GLRenderer>();
+  auto gl_renderer = std::make_unique<GLRenderer>();
+  RenderConfig config;
+  gl_renderer->SetConfig(&config);
+  std::unique_ptr<IRenderer> renderer = std::move(gl_renderer);
   scene.Add(std::move(loader.object_3d_));
 
-  // Render config + MSAA FBO
-  RenderConfig config;
+  // MSAA FBO
   std::unique_ptr<GLFramebuffer> fbo =
       std::make_unique<GLFramebuffer>(SCR_WIDTH, SCR_HEIGHT, config.msaa_samples);
 
@@ -192,6 +188,11 @@ int main(int argc, char* argv[]) {
     ImGui::Separator();
     ImGui::Text("Rendering");
     ImGui::Checkbox("MSAA", &config.msaa_enabled);
+    ImGui::Checkbox("PBR", &config.use_pbr);
+    if (config.use_pbr) {
+      ImGui::SliderFloat("Metallic",  &config.pbr_metallic,  0.0f, 1.0f);
+      ImGui::SliderFloat("Roughness", &config.pbr_roughness, 0.0f, 1.0f);
+    }
     // Sample count selector (only meaningful when MSAA is on)
     if (config.msaa_enabled) {
       const char* sample_items[] = { "1x", "2x", "4x", "8x" };

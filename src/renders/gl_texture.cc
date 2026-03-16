@@ -11,6 +11,10 @@ GLTexture::GLTexture(const Material& material) {
     specular_id_ = TextureFromFile(material.metalness_map_texture_path);
   if (!material.normal_map_texture_path.empty())
     normal_id_ = TextureFromFile(material.normal_map_texture_path);
+  if (!material.roughness_map_texture_path.empty())
+    roughness_id_ = TextureFromFile(material.roughness_map_texture_path);
+  if (!material.ao_map_texture_path.empty())
+    ao_id_ = TextureFromFile(material.ao_map_texture_path);
   path_ = material.map_texture_path;
 }
 

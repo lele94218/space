@@ -103,9 +103,23 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
       ai_material->GetTexture(aiTextureType_NORMALS, 0, &ai_str);
       material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
     } else if (ai_material->GetTextureCount(aiTextureType_HEIGHT)) {
-      // .obj files store normal maps under HEIGHT
       ai_material->GetTexture(aiTextureType_HEIGHT, 0, &ai_str);
       material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    }
+    if (ai_material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS)) {
+      ai_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &ai_str);
+      material.roughness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    } else if (ai_material->GetTextureCount(aiTextureType_SHININESS)) {
+      // .obj stores roughness under SHININESS
+      ai_material->GetTexture(aiTextureType_SHININESS, 0, &ai_str);
+      material.roughness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    }
+    if (ai_material->GetTextureCount(aiTextureType_AMBIENT_OCCLUSION)) {
+      ai_material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &ai_str);
+      material.ao_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+    } else if (ai_material->GetTextureCount(aiTextureType_AMBIENT)) {
+      ai_material->GetTexture(aiTextureType_AMBIENT, 0, &ai_str);
+      material.ao_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
     }
     material.shader_name = "model_shader";
   }
