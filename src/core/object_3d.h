@@ -11,6 +11,7 @@ class Object3D {
   virtual ~Object3D() = default;
 
   void Add(std::unique_ptr<Object3D> object_3d);
+  void Clear() { children_.clear(); }
 
   const std::string& name() const { return name_; }
   int size() const { return children_.size(); }

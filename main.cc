@@ -16,7 +16,10 @@
 #include "src/render_config.h"
 #include "src/renders/gl_framebuffer.h"
 #include "src/renders/gl_renderer.h"
+#include "src/renders/gl_texture.h"
 #include "src/renders/i_renderer.h"
+
+#include <filesystem>
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -72,16 +75,50 @@ int main(int argc, char* argv[]) {
   ImGui_ImplSDL2_InitForOpenGL(window, context);
   ImGui_ImplOpenGL3_Init("#version 330 core");
 
-  // Scene
-  CameraObject camera;
-  ObjLoader loader("assets/backpack/backpack.obj");
-  loader.Load();
-  SceneObject scene;
-  auto gl_renderer = std::make_unique<GLRenderer>();
+  // Scan assets/ for loadable models
+  auto scan_models = []() -> std::vector<std::string> {
+    std::vector<std::string> models;
+    const std::vector<std::string> exts = {".obj", ".glb", ".gltf", ".fbx"};
+    try {
+      for (auto& entry : std::filesystem::recursive_directory_iterator("assets")) {
+        if (!entry.is_regular_file()) continue;
+        std::string ext = entry.path().extension().string();
+        for (auto& e : exts) {
+          if (ext == e) { models.push_back(entry.path().string()); break; }
+        }
+      }
+    } catch (...) {}
+    std::sort(models.begin(), models.end());
+    return models;
+  };
+  std::vector<std::string> model_list = scan_models();
+  int selected_model = 0;  // index into model_list
+  std::string current_model = model_list.empty() ? "" : model_list[0];
+
+  // Load a model into the scene, clearing previous resources
+  auto gl_renderer_ptr = std::make_unique<GLRenderer>();
   RenderConfig config;
-  gl_renderer->SetConfig(&config);
-  std::unique_ptr<IRenderer> renderer = std::move(gl_renderer);
-  scene.Add(std::move(loader.object_3d_));
+  gl_renderer_ptr->SetConfig(&config);
+  GLRenderer* raw_renderer = gl_renderer_ptr.get();
+  std::unique_ptr<IRenderer> renderer = std::move(gl_renderer_ptr);
+
+  SceneObject scene;
+  CameraObject camera;
+
+  auto load_model = [&](const std::string& path) {
+    // Clear previous resources
+    GLTexture::ClearFileCache();
+    GLGlobalResources::GetInstance().ClearMeshResources();
+    raw_renderer->Reset();
+    scene.Clear();
+    ObjLoader loader(path);
+    loader.Load();
+    scene.Add(std::move(loader.object_3d_));
+    current_model = path;
+    LOG(INFO) << "Loaded model: " << path;
+  };
+
+  if (!current_model.empty()) load_model(current_model);
 
   // MSAA FBO
   std::unique_ptr<GLFramebuffer> fbo =
@@ -181,6 +218,31 @@ int main(int argc, char* argv[]) {
 
     ImGui::Begin("Debug");
     ImGui::Text("FPS: %.1f", io.Framerate);
+
+    // Model selector — auto-discovered from assets/
+    ImGui::Text("Model");
+    if (!model_list.empty()) {
+      auto short_name = [](const std::string& p) -> std::string {
+        auto pos = p.find_last_of("/\\");
+        return pos == std::string::npos ? p : p.substr(pos + 1);
+      };
+      std::string preview = short_name(model_list[selected_model]);
+      if (ImGui::BeginCombo("##model", preview.c_str())) {
+        for (int i = 0; i < (int)model_list.size(); i++) {
+          bool sel = (i == selected_model);
+          if (ImGui::Selectable(short_name(model_list[i]).c_str(), sel)) {
+            if (i != selected_model) {
+              selected_model = i;
+              load_model(model_list[i]);
+            }
+          }
+          if (sel) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    ImGui::Separator();
     ImGui::Text("Camera: (%.1f, %.1f, %.1f)",
       camera.position().x, camera.position().y, camera.position().z);
     if (ImGui::Button("Reset Camera")) camera.Reset();
@@ -193,6 +255,11 @@ int main(int argc, char* argv[]) {
       ImGui::SliderFloat("Metallic",  &config.pbr_metallic,  0.0f, 1.0f);
       ImGui::SliderFloat("Roughness", &config.pbr_roughness, 0.0f, 1.0f);
     }
+
+    ImGui::Separator();
+    ImGui::Text("Light");
+    ImGui::SliderFloat("Intensity", &config.light_intensity, 0.0f, 200.0f);
+    ImGui::SliderFloat3("Position", config.light_pos, -10.0f, 10.0f);
     // Sample count selector (only meaningful when MSAA is on)
     if (config.msaa_enabled) {
       const char* sample_items[] = { "1x", "2x", "4x", "8x" };

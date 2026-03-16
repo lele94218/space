@@ -14,6 +14,7 @@ uniform sampler2D texture_roughness; // unit 3
 uniform sampler2D texture_ao;        // unit 4
 
 // Texture availability flags
+uniform vec3 base_color_factor = vec3(1.0, 1.0, 1.0);
 uniform int use_normal_map  = 0;
 uniform int use_roughness   = 0;
 uniform int use_ao          = 0;
@@ -59,10 +60,13 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 
 void main() {
   // --- Sample textures ---
-  vec3 albedo = texture(texture_albedo, tex_coords).rgb;
+  // Albedo: texture * base_color_factor, converted sRGB -> linear
+  vec3 albedo_srgb = (texture(texture_albedo, tex_coords).rgb) * base_color_factor;
+  vec3 albedo = pow(max(albedo_srgb, vec3(0.0)), vec3(2.2));
 
-  float metallic  = (use_metallic  == 1) ? texture(texture_specular,  tex_coords).r : u_metallic;
-  float roughness = (use_roughness == 1) ? texture(texture_roughness, tex_coords).r : u_roughness;
+  // glTF metallic-roughness packed texture: G=roughness, B=metallic
+  float metallic  = (use_metallic  == 1) ? texture(texture_specular,  tex_coords).b : u_metallic;
+  float roughness = (use_roughness == 1) ? texture(texture_roughness, tex_coords).g : u_roughness;
   float ao        = (use_ao        == 1) ? texture(texture_ao,        tex_coords).r : u_ao;
 
   // Normal

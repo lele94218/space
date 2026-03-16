@@ -14,10 +14,14 @@ ObjLoader::ObjLoader(const std::string& file_path) {
 void ObjLoader::Load() {
   Assimp::Importer importer;
   const std::string file_path = root_dir_ + "/" + file_name_;
-  const aiScene* scene = importer.ReadFile(file_path,
-    aiProcess_Triangulate |
-    aiProcess_FlipUVs |
-    aiProcess_CalcTangentSpace);  // auto-compute tangents for normal mapping
+  // glTF/GLB uses top-left UV origin like OpenGL — FlipUVs would break it.
+  // .obj/.fbx typically need FlipUVs to display correctly in OpenGL.
+  const bool needs_flip_uvs = (file_name_.rfind(".glb")  == std::string::npos &&
+                                file_name_.rfind(".gltf") == std::string::npos);
+  unsigned int flags = aiProcess_Triangulate | aiProcess_CalcTangentSpace;
+  if (needs_flip_uvs) flags |= aiProcess_FlipUVs;
+
+  const aiScene* scene = importer.ReadFile(file_path, flags);
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
     LOG(ERROR) << "ERROR::ASSIMP::" << importer.GetErrorString();
     return;
@@ -91,37 +95,64 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
   if (mesh->mMaterialIndex >= 0) {
     aiMaterial* ai_material = scene->mMaterials[mesh->mMaterialIndex];
     aiString ai_str;
-    if (ai_material->GetTextureCount(aiTextureType_DIFFUSE)) {
-      ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &ai_str);
-      material.map_texture_path = root_dir_ + "/" + ai_str.C_Str();
+
+    // Helper lambda: resolve texture path, cache embedded textures if *N format
+    auto resolve = [&](aiTextureType type, std::string& out_path) {
+      if (!ai_material->GetTextureCount(type)) return;
+      ai_material->GetTexture(type, 0, &ai_str);
+      std::string raw = ai_str.C_Str();
+      if (!raw.empty() && raw[0] == '*') {
+        // Embedded texture in GLB
+        int idx = std::stoi(raw.substr(1));
+        if (idx < (int)scene->mNumTextures) {
+          const aiTexture* tex = scene->mTextures[idx];
+          out_path = raw;  // use "*N" as map key
+          if (!material.embedded_textures.count(raw)) {
+            size_t data_size = tex->mHeight == 0
+                ? tex->mWidth   // compressed (PNG/JPG): mWidth = byte count
+                : tex->mWidth * tex->mHeight * 4;  // raw RGBA
+            const unsigned char* src = reinterpret_cast<const unsigned char*>(tex->pcData);
+            material.embedded_textures[raw] = std::vector<unsigned char>(src, src + data_size);
+          }
+        }
+      } else {
+        out_path = root_dir_ + "/" + raw;
+      }
+    };
+
+    resolve(aiTextureType_DIFFUSE,           material.map_texture_path);
+    resolve(aiTextureType_SPECULAR,          material.metalness_map_texture_path);
+    resolve(aiTextureType_NORMALS,           material.normal_map_texture_path);
+    if (material.normal_map_texture_path.empty())
+      resolve(aiTextureType_HEIGHT,          material.normal_map_texture_path);
+    resolve(aiTextureType_DIFFUSE_ROUGHNESS, material.roughness_map_texture_path);
+    if (material.roughness_map_texture_path.empty())
+      resolve(aiTextureType_SHININESS,       material.roughness_map_texture_path);
+    resolve(aiTextureType_AMBIENT_OCCLUSION, material.ao_map_texture_path);
+    if (material.ao_map_texture_path.empty())
+      resolve(aiTextureType_AMBIENT,         material.ao_map_texture_path);
+
+    // Read base color factor (glTF PBR)
+    aiColor4D base_color(1.f, 1.f, 1.f, 1.f);
+    if (ai_material->Get(AI_MATKEY_BASE_COLOR, base_color) == AI_SUCCESS) {
+      material.base_color[0] = base_color.r;
+      material.base_color[1] = base_color.g;
+      material.base_color[2] = base_color.b;
+      material.base_color[3] = base_color.a;
+    } else if (ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, base_color) == AI_SUCCESS) {
+      material.base_color[0] = base_color.r;
+      material.base_color[1] = base_color.g;
+      material.base_color[2] = base_color.b;
     }
-    if (ai_material->GetTextureCount(aiTextureType_SPECULAR)) {
-      ai_material->GetTexture(aiTextureType_SPECULAR, 0, &ai_str);
-      material.metalness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    }
-    if (ai_material->GetTextureCount(aiTextureType_NORMALS)) {
-      ai_material->GetTexture(aiTextureType_NORMALS, 0, &ai_str);
-      material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    } else if (ai_material->GetTextureCount(aiTextureType_HEIGHT)) {
-      ai_material->GetTexture(aiTextureType_HEIGHT, 0, &ai_str);
-      material.normal_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    }
-    if (ai_material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS)) {
-      ai_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &ai_str);
-      material.roughness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    } else if (ai_material->GetTextureCount(aiTextureType_SHININESS)) {
-      // .obj stores roughness under SHININESS
-      ai_material->GetTexture(aiTextureType_SHININESS, 0, &ai_str);
-      material.roughness_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    }
-    if (ai_material->GetTextureCount(aiTextureType_AMBIENT_OCCLUSION)) {
-      ai_material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &ai_str);
-      material.ao_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    } else if (ai_material->GetTextureCount(aiTextureType_AMBIENT)) {
-      ai_material->GetTexture(aiTextureType_AMBIENT, 0, &ai_str);
-      material.ao_map_texture_path = root_dir_ + "/" + ai_str.C_Str();
-    }
+
     material.shader_name = "model_shader";
+    LOG(INFO) << "Material[" << material.id << "] "
+              << " diffuse=" << material.map_texture_path
+              << " specular=" << material.metalness_map_texture_path
+              << " normal=" << material.normal_map_texture_path
+              << " roughness=" << material.roughness_map_texture_path
+              << " ao=" << material.ao_map_texture_path
+              << " embedded_count=" << material.embedded_textures.size();
   }
   return std::make_unique<MeshObject>(geometry, material);
 }

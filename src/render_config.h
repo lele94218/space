@@ -13,4 +13,8 @@ struct RenderConfig {
   // PBR fallback values (used when textures are missing)
   float pbr_metallic  = 0.0f;
   float pbr_roughness = 0.5f;
+
+  // Light
+  float light_intensity = 30.0f;
+  float light_pos[3]    = {5.0f, 5.0f, 5.0f};
 };

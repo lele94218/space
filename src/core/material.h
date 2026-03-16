@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 class Material {
  public:
@@ -14,6 +16,12 @@ class Material {
   std::string roughness_map_texture_path; // roughness
   std::string ao_map_texture_path;        // ambient occlusion
   std::string shader_name;
+
+  // Embedded texture data (for GLB/GLTF): path "*N" -> raw bytes
+  std::unordered_map<std::string, std::vector<unsigned char>> embedded_textures;
+
+  // glTF PBR base color factor (multiplied with albedo texture or used alone)
+  float base_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
  private:
   static int unique_id_;

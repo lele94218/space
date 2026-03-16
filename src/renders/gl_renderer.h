@@ -14,6 +14,7 @@ class GLRenderer : public IRenderer {
 
   void Render(const SceneObject& scene, const CameraObject& camera) override;
   void SetConfig(RenderConfig* config) { config_ = config; }
+  void Reset() { render_list_.clear(); initialized_ = false; }
 
  private:
   void SetupMeshObject(const MeshObject* mesh_object) const;
@@ -21,10 +22,12 @@ class GLRenderer : public IRenderer {
   void DrawBlinnPhong(const GLBindingState& binding_state,
                       const GLProgram& program,
                       const GLTexture& texture,
+                      const Material& material,
                       unsigned int index_size) const;
   void DrawPBR(const GLBindingState& binding_state,
                const GLProgram& program,
                const GLTexture& texture,
+               const Material& material,
                unsigned int index_size) const;
 
   std::vector<const Object3D*> render_list_;

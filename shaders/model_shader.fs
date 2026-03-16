@@ -26,6 +26,7 @@ uniform Material material;
 uniform Light light;
 uniform vec3 view_pos;
 uniform vec3 default_color = vec3(1.0, 1.0, 1.0);
+uniform vec3 base_color_factor = vec3(1.0, 1.0, 1.0);
 uniform int texture_sample = 1;
 uniform int use_normal_map = 0;
 
@@ -44,21 +45,21 @@ void main() {
 
   vec3 ambient, diffuse, specular;
 
-  // Ambient
+  // Resolve albedo: texture * base_color_factor (or just factor if no texture)
+  vec3 albedo;
   if (texture_sample == 1) {
-    ambient = light.ambient * texture(texture_diffuse1, tex_coords).rgb;
+    albedo = texture(texture_diffuse1, tex_coords).rgb * base_color_factor;
   } else {
-    ambient = light.ambient * default_color;
+    albedo = base_color_factor;
   }
+
+  // Ambient
+  ambient = light.ambient * albedo;
 
   // Diffuse
   vec3 light_dir = normalize(light.position - frag_pos);
   float diff = max(dot(norm, light_dir), 0.0);
-  if (texture_sample == 1) {
-    diffuse = light.diffuse * diff * texture(texture_diffuse1, tex_coords).rgb;
-  } else {
-    diffuse = light.diffuse * diff * default_color;
-  }
+  diffuse = light.diffuse * diff * albedo;
 
   // Specular (Blinn-Phong)
   vec3 view_dir = normalize(view_pos - frag_pos);
@@ -67,7 +68,7 @@ void main() {
   if (texture_sample == 1) {
     specular = light.specular * spec * texture(texture_specular1, tex_coords).rgb;
   } else {
-    specular = light.specular * spec * default_color;
+    specular = light.specular * spec * vec3(0.3);
   }
 
   vec3 result = ambient + diffuse + specular;

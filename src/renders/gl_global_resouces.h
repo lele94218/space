@@ -19,6 +19,13 @@ class GLGlobalResources {
   std::unordered_map<std::string, std::unique_ptr<GLTexture>>& textures() { return gl_textures_; }
   std::unordered_map<std::string, std::unique_ptr<GLProgram>>& programs() { return gl_programs_; }
 
+  // Clear mesh-specific resources (textures + binding states) when switching models.
+  // Shaders are kept since they're reusable.
+  void ClearMeshResources() {
+    gl_binding_states_.clear();
+    gl_textures_.clear();
+  }
+
  private:
   GLGlobalResources() = default;
 

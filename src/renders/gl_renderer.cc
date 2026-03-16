@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "../core/material.h"
 #include "../errors/gl_error.h"
 #include "../render_config.h"
 
@@ -47,21 +48,27 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
   glm::mat4 model = glm::mat4(1.0f);
 
   glm::vec3 light_pos(5.0f, 5.0f, 5.0f);
+  float intensity = 30.0f;
+  if (config_) {
+    light_pos = glm::vec3(config_->light_pos[0], config_->light_pos[1], config_->light_pos[2]);
+    intensity = config_->light_intensity;
+  }
 
   if (config_ && config_->use_pbr) {
     // PBR uniforms
     program_ptr->SetVector3("light_pos",   glm::value_ptr(light_pos));
-    program_ptr->SetVector3("light_color", glm::value_ptr(glm::vec3(150.0f)));
+    program_ptr->SetVector3("light_color", glm::value_ptr(glm::vec3(intensity)));
     program_ptr->SetVector3("view_pos",    glm::value_ptr(camera.position()));
     program_ptr->SetFloat("u_metallic",    config_->pbr_metallic);
     program_ptr->SetFloat("u_roughness",   config_->pbr_roughness);
     program_ptr->SetFloat("u_ao",          1.0f);
   } else {
-    // Blinn-Phong uniforms
+    // Blinn-Phong uniforms — normalize intensity to 0-2 range
+    float d = intensity / 50.0f;
     program_ptr->SetVector3("light.position", glm::value_ptr(light_pos));
-    program_ptr->SetVector3("light.diffuse",  glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
-    program_ptr->SetVector3("light.ambient",  glm::value_ptr(glm::vec3(0.1f, 0.1f, 0.1f)));
-    program_ptr->SetVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
+    program_ptr->SetVector3("light.diffuse",  glm::value_ptr(glm::vec3(d, d, d * 0.8f)));
+    program_ptr->SetVector3("light.ambient",  glm::value_ptr(glm::vec3(0.1f)));
+    program_ptr->SetVector3("light.specular", glm::value_ptr(glm::vec3(d, d, d * 0.8f)));
     program_ptr->SetVector3("view_pos",       glm::value_ptr(camera.position()));
     program_ptr->SetFloat("material.shininess", 32.0f);
   }
@@ -83,9 +90,12 @@ void GLRenderer::SetupMeshObject(const MeshObject* mesh_object) const {
   const Material& material = mesh_object->material();
   const Geometry& geometry = mesh_object->geometry();
 
-  if (!GLGlobalResources::GetInstance().textures().count(material.map_texture_path)) {
+  // Key by material.id (not texture path) — different meshes may share diffuse
+  // but have unique normal/roughness maps; wrong key would cause texture aliasing.
+  const std::string mat_key = "mat:" + std::to_string(material.id);
+  if (!GLGlobalResources::GetInstance().textures().count(mat_key)) {
     auto ptr = std::make_unique<GLTexture>(material);
-    GLGlobalResources::GetInstance().textures().emplace(material.map_texture_path, std::move(ptr));
+    GLGlobalResources::GetInstance().textures().emplace(mat_key, std::move(ptr));
   }
   if (!GLGlobalResources::GetInstance().binding_states().count(geometry.id)) {
     auto ptr = std::make_unique<GLBindingState>(geometry);
@@ -102,8 +112,9 @@ void GLRenderer::SetupMeshObject(const MeshObject* mesh_object) const {
 void GLRenderer::RenderMeshObject(const MeshObject* mesh_object, const CameraObject& camera) const {
   const Material& material = mesh_object->material();
   const Geometry& geometry = mesh_object->geometry();
+  const std::string mat_key = "mat:" + std::to_string(material.id);
   const GLTexture* texture =
-      GLGlobalResources::GetInstance().textures().at(material.map_texture_path).get();
+      GLGlobalResources::GetInstance().textures().at(mat_key).get();
   const GLBindingState* binding_state =
       GLGlobalResources::GetInstance().binding_states().at(geometry.id).get();
 
@@ -112,26 +123,33 @@ void GLRenderer::RenderMeshObject(const MeshObject* mesh_object, const CameraObj
       GLGlobalResources::GetInstance().programs().at(shader_name).get();
 
   if (config_ && config_->use_pbr)
-    DrawPBR(*binding_state, *program, *texture, geometry.index_size());
+    DrawPBR(*binding_state, *program, *texture, material, geometry.index_size());
   else
-    DrawBlinnPhong(*binding_state, *program, *texture, geometry.index_size());
+    DrawBlinnPhong(*binding_state, *program, *texture, material, geometry.index_size());
 }
 
 void GLRenderer::DrawBlinnPhong(const GLBindingState& binding_state,
                                 const GLProgram& program,
                                 const GLTexture& texture,
+                                const Material& material,
                                 unsigned int index_size) const {
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
-  program.SetInt("texture_diffuse1", 0);
+  // Pass base color factor (modulates diffuse or serves as fallback color)
+  program.SetVector3("base_color_factor", material.base_color);
+
+  // unit 0: diffuse — texture_sample=1 if diffuse exists
+  if (texture.diffuse_id()) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
+    program.SetInt("texture_diffuse1", 0);
+    program.SetInt("texture_sample", 1);
+  } else {
+    program.SetInt("texture_sample", 0);
+  }
 
   if (texture.has_specular()) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture.specular_id());
     program.SetInt("texture_specular1", 1);
-    program.SetInt("texture_sample", 1);
-  } else {
-    program.SetInt("texture_sample", 0);
   }
 
   if (texture.has_normal()) {
@@ -152,21 +170,23 @@ void GLRenderer::DrawBlinnPhong(const GLBindingState& binding_state,
 void GLRenderer::DrawPBR(const GLBindingState& binding_state,
                          const GLProgram& program,
                          const GLTexture& texture,
+                         const Material& material,
                          unsigned int index_size) const {
+  // Pass base color factor
+  program.SetVector3("base_color_factor", material.base_color);
+
   // unit 0: albedo
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
   program.SetInt("texture_albedo", 0);
 
-  // unit 1: metallic (specular map)
+  // unit 1: specular (if available)
   if (texture.has_specular()) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture.specular_id());
-    program.SetInt("texture_specular", 1);
-    program.SetInt("use_metallic", 1);
-  } else {
-    program.SetInt("use_metallic", 0);
+    program.SetInt("texture_specular1", 1);
   }
+  program.SetInt("use_metallic", 0);
 
   // unit 2: normal map
   if (texture.has_normal()) {

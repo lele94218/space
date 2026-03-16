@@ -19,8 +19,10 @@ class GLTexture {
   bool has_roughness() const { return roughness_id_ != 0; }
   bool has_ao()        const { return ao_id_        != 0; }
 
+  // Clear the global file texture cache (call when switching models)
+  static void ClearFileCache();
+
  private:
-  unsigned int TextureFromFile(const std::string& file_path, bool gamma = false);
 
   unsigned int diffuse_id_   = 0;
   unsigned int specular_id_  = 0;
