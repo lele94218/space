@@ -2,7 +2,7 @@
 
 A real-time 3D rendering engine built with C++ and OpenGL, inspired by the architecture of [Three.js](https://threejs.org/).
 
-![Lily render](space_ibl_test.png)
+![Lily render](preview.png)
 
 ## Features
 
