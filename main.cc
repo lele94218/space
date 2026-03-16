@@ -27,8 +27,9 @@ int main(int argc, char* argv[]) {
   stbi_set_flip_vertically_on_load(true);
 
   SDL_Window* window = nullptr;
-  const int SCR_WIDTH  = 900;
-  const int SCR_HEIGHT = 600;
+  int SCR_WIDTH  = 1280;
+  int SCR_HEIGHT = 720;
+  bool is_fullscreen = true;
   float last_time  = 0.0f;
   float total_time = 0.0f;
   int   frame_count = 0;
@@ -58,7 +59,14 @@ int main(int argc, char* argv[]) {
   window = SDL_CreateWindow("Space",
     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
     SCR_WIDTH, SCR_HEIGHT,
-    SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+    SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL |
+    SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+  // Default fullscreen
+  if (is_fullscreen)
+    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+  // Raise window to front
+  SDL_RaiseWindow(window);
+  SDL_SetWindowInputFocus(window);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
   gladLoadGLLoader(SDL_GL_GetProcAddress);
@@ -93,7 +101,14 @@ int main(int argc, char* argv[]) {
     return models;
   };
   std::vector<std::string> model_list = scan_models();
+  // Default to Lily (GLB) if available, otherwise first model
   int selected_model = 0;
+  for (int i = 0; i < (int)model_list.size(); ++i) {
+    if (model_list[i].find("lily") != std::string::npos ||
+        model_list[i].find("stellar") != std::string::npos) {
+      selected_model = i; break;
+    }
+  }
   std::string current_model = model_list.empty() ? "" : model_list[selected_model];
 
   // Load a model into the scene, clearing previous resources
@@ -180,6 +195,17 @@ int main(int argc, char* argv[]) {
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL2_ProcessEvent(&event);
       if (event.type == SDL_QUIT) gameIsRunning = false;
+      // F key: toggle fullscreen
+      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_f && !io.WantCaptureKeyboard) {
+        is_fullscreen = !is_fullscreen;
+        SDL_SetWindowFullscreen(window, is_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+      }
+      // Window resize: update SCR_WIDTH/HEIGHT
+      if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+        SCR_WIDTH  = event.window.data1;
+        SCR_HEIGHT = event.window.data2;
+        config_dirty = true;
+      }
       if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_RIGHT) {
         if (!io.WantCaptureMouse) {
           rightMouseDown = true;
@@ -286,8 +312,17 @@ int main(int argc, char* argv[]) {
     }
 
     ImGui::Separator();
+    // Fullscreen toggle
+    if (ImGui::Button(is_fullscreen ? "Windowed" : "Fullscreen")) {
+      is_fullscreen = !is_fullscreen;
+      SDL_SetWindowFullscreen(window,
+        is_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    }
+
+    ImGui::Separator();
     ImGui::Text("Right-drag: rotate view");
     ImGui::Text("WASD: move");
+    ImGui::Text("F: toggle fullscreen");
     ImGui::End();
 
     ImGui::Render();
