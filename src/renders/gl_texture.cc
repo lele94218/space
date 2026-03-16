@@ -48,14 +48,16 @@ static unsigned int LoadFromFile(const std::string& path) {
 GLTexture::GLTexture(const Material& material) {
   // GLTFLoader path: direct GL IDs already uploaded
   if (material.gl_albedo != 0) {
-    diffuse_id_             = material.gl_albedo;
-    metallic_roughness_id_  = material.gl_metallic_roughness;
-    normal_id_              = material.gl_normal;
-    ao_id_                  = material.gl_occlusion;
-    emissive_id_            = material.gl_emissive;
+    diffuse_id_              = material.gl_albedo;
+    metallic_roughness_id_   = material.gl_metallic_roughness;
+    normal_id_               = material.gl_normal;
+    ao_id_                   = material.gl_occlusion;
+    emissive_id_             = material.gl_emissive;
     // Also expose metallic_roughness as roughness/specular for legacy code paths
     roughness_id_ = material.gl_metallic_roughness;
     specular_id_  = material.gl_metallic_roughness;
+    // KHR_materials_clearcoat
+    clearcoat_normal_tex_id_ = material.gl_clearcoat_normal_tex;
     path_ = "gltf";
     return;
   }

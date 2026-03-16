@@ -12,13 +12,23 @@ uniform sampler2D texture_metallic_rough;   // unit 1  G=roughness, B=metallic
 uniform sampler2D texture_normal;           // unit 2
 uniform sampler2D texture_occlusion;        // unit 3  R=ao
 uniform sampler2D texture_emissive;         // unit 4
+uniform sampler2D texture_clearcoat_normal; // unit 5
 
 // Texture flags
-uniform int use_metallic_rough = 0;
-uniform int use_normal_map     = 0;
-uniform int use_occlusion      = 0;
-uniform int use_emissive       = 0;
-uniform int has_albedo         = 0;
+uniform int use_metallic_rough  = 0;
+uniform int use_normal_map      = 0;
+uniform int use_occlusion       = 0;
+uniform int use_emissive        = 0;
+uniform int has_albedo          = 0;
+uniform int use_clearcoat_normal = 0;
+
+// KHR_materials_clearcoat
+uniform float clearcoat_factor    = 0.0;
+uniform float clearcoat_roughness = 0.0;
+
+// KHR_materials_specular
+uniform float specular_factor       = 1.0;
+uniform vec3  specular_color_factor = vec3(1.0);
 
 // PBR factors (multiplied with texture samples)
 uniform vec4  base_color_factor    = vec4(1.0, 1.0, 1.0, 1.0);
@@ -106,7 +116,9 @@ void main() {
 
   // ── Cook-Torrance BRDF ───────────────────────────────────────────────────
   vec3 V  = normalize(view_pos - frag_pos);
-  vec3 F0 = mix(vec3(0.04), albedo, metallic);
+  // KHR_materials_specular: modulate dielectric F0 by specular_factor and color
+  vec3 dielectric_F0 = 0.04 * specular_factor * specular_color_factor;
+  vec3 F0 = mix(dielectric_F0, albedo, metallic);
 
   vec3 L = normalize(light_pos - frag_pos);
   vec3 H = normalize(V + L);
@@ -122,6 +134,27 @@ void main() {
   vec3 spec = (D * G * F) / (4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001);
   vec3 kd   = (vec3(1.0) - F) * (1.0 - metallic);
   vec3 Lo   = (kd * albedo / PI + spec) * radiance * NdotL;
+
+  // ── KHR_materials_clearcoat layer ────────────────────────────────────────
+  if (clearcoat_factor > 0.0) {
+    // Clearcoat normal (optional)
+    vec3 N_cc;
+    if (use_clearcoat_normal == 1) {
+      vec3 n_cc = texture(texture_clearcoat_normal, tex_coords).rgb * 2.0 - 1.0;
+      N_cc = normalize(TBN * normalize(n_cc));
+    } else {
+      N_cc = N;
+    }
+    float cc_rough = max(clearcoat_roughness, 0.04);
+    float D_cc  = DistributionGGX(N_cc, H, cc_rough);
+    float G_cc  = GeometrySmith(N_cc, V, L, cc_rough);
+    float F_cc  = FresnelSchlick(max(dot(H, V), 0.0), vec3(0.04)).x;
+    float NdotL_cc = max(dot(N_cc, L), 0.0);
+    float cc_spec  = D_cc * G_cc * F_cc / (4.0 * max(dot(N_cc, V), 0.0) * NdotL_cc + 0.0001);
+    // Attenuate base layer and add clearcoat contribution
+    Lo = Lo * (1.0 - clearcoat_factor * F_cc)
+       + vec3(cc_spec) * radiance * NdotL_cc * clearcoat_factor;
+  }
 
   // ── Ambient + AO ─────────────────────────────────────────────────────────
   vec3 color = vec3(0.03) * albedo * ao + Lo;

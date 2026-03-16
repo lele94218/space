@@ -328,13 +328,73 @@ std::unique_ptr<MeshObject> GLTFLoader::BuildMeshObject(int mesh_index,
           mat.emissive_factor[k] = ef[k].get<float>();
       }
 
+      std::string mat_name = jmat.value("name", "?");
       std::string alpha_str = jmat.value("alphaMode", "OPAQUE");
       if      (alpha_str == "MASK")  mat.alpha_mode = 1;
       else if (alpha_str == "BLEND") mat.alpha_mode = 2;
       else                           mat.alpha_mode = 0;
 
       mat.alpha_cutoff = jmat.value("alphaCutoff", 0.5f);
+
+      // Hair cards need MASK (not BLEND) to show individual strands.
+      // The glTF file incorrectly marks hair as BLEND; override it.
+      std::string mat_name_lower = mat_name;
+      std::transform(mat_name_lower.begin(), mat_name_lower.end(),
+                     mat_name_lower.begin(), ::tolower);
+      if (mat.alpha_mode == 2 &&
+          (mat_name_lower.find("_hr_") != std::string::npos ||
+           mat_name_lower.find("hair") != std::string::npos)) {
+        mat.alpha_mode = 1;  // BLEND -> MASK
+        mat.alpha_cutoff = 0.5f;
+        LOG(ERROR) << "[GLTF Mat] Override hair BLEND->MASK: " << mat_name;
+      }
       mat.double_sided = jmat.value("doubleSided", false);
+
+      // ── KHR_materials_clearcoat ─────────────────────────────────────────
+      if (jmat.contains("extensions")) {
+        const json& ext = jmat["extensions"];
+
+        if (ext.contains("KHR_materials_clearcoat")) {
+          const json& cc = ext["KHR_materials_clearcoat"];
+          mat.clearcoat_factor           = cc.value("clearcoatFactor", 0.0f);
+          mat.clearcoat_roughness_factor = cc.value("clearcoatRoughnessFactor", 0.0f);
+          if (cc.contains("clearcoatTexture"))
+            mat.gl_clearcoat_tex =
+                ResolveTexture(cc["clearcoatTexture"]["index"].get<int>());
+          if (cc.contains("clearcoatRoughnessTexture"))
+            mat.gl_clearcoat_roughness_tex =
+                ResolveTexture(cc["clearcoatRoughnessTexture"]["index"].get<int>());
+          if (cc.contains("clearcoatNormalTexture"))
+            mat.gl_clearcoat_normal_tex =
+                ResolveTexture(cc["clearcoatNormalTexture"]["index"].get<int>());
+        }
+
+        if (ext.contains("KHR_materials_specular")) {
+          const json& sp = ext["KHR_materials_specular"];
+          mat.specular_factor = sp.value("specularFactor", 1.0f);
+          if (sp.contains("specularColorFactor")) {
+            const auto& scf = sp["specularColorFactor"];
+            for (int k = 0; k < 3 && k < static_cast<int>(scf.size()); ++k)
+              mat.specular_color_factor[k] = scf[k].get<float>();
+          }
+          if (sp.contains("specularTexture"))
+            mat.gl_specular_tex =
+                ResolveTexture(sp["specularTexture"]["index"].get<int>());
+          if (sp.contains("specularColorTexture"))
+            mat.gl_specular_color_tex =
+                ResolveTexture(sp["specularColorTexture"]["index"].get<int>());
+        }
+      }
+
+      // Debug: log material info
+      LOG(ERROR) << "[GLTF Mat] " << mat_name
+                << " alpha=" << alpha_str
+                << " cutoff=" << mat.alpha_cutoff
+                << " albedo=" << mat.gl_albedo
+                << " mr=" << mat.gl_metallic_roughness
+                << " norm=" << mat.gl_normal
+                << " base_color=[" << mat.base_color[0] << "," << mat.base_color[1]
+                << "," << mat.base_color[2] << "," << mat.base_color[3] << "]";
     }
   }
 
@@ -501,19 +561,20 @@ unsigned int GLTFLoader::LoadGLTexture(int image_index, int sampler_index) const
 
   stbi_set_flip_vertically_on_load(0);
   int w = 0, h = 0, ch = 0;
+  // Force RGBA so alpha channel is always available for MASK/BLEND materials
   unsigned char* pixels = stbi_load_from_memory(
-      bin_buffer_.data() + byte_offset, byte_length, &w, &h, &ch, 0);
+      bin_buffer_.data() + byte_offset, byte_length, &w, &h, &ch, 4);
   if (!pixels) {
     LOG(ERROR) << "GLTFLoader: stbi failed for image " << image_index
                << ": " << stbi_failure_reason();
     return 0u;
   }
+  LOG(ERROR) << "[GLTF Tex] image=" << image_index
+             << " orig_ch=" << ch << " size=" << w << "x" << h;
 
-  GLenum ifmt = GL_RGB8, fmt = GL_RGB;
-  if      (ch == 1) { ifmt = GL_R8;    fmt = GL_RED;  }
-  else if (ch == 2) { ifmt = GL_RG8;   fmt = GL_RG;   }
-  else if (ch == 3) { ifmt = GL_RGB8;  fmt = GL_RGB;  }
-  else if (ch == 4) { ifmt = GL_RGBA8; fmt = GL_RGBA; }
+  // Always RGBA since we forced 4 channels above
+  GLenum ifmt = GL_RGBA8, fmt = GL_RGBA;
+  ch = 4;
 
   unsigned int tex_id = 0u;
   glGenTextures(1, &tex_id);

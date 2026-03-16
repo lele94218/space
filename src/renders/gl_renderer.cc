@@ -196,9 +196,9 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
                          const GLTexture& texture,
                          const Material& material,
                          unsigned int index_size) const {
-  // Bind fallback white texture to all 5 units first (silences driver warnings)
+  // Bind fallback white texture to all 6 units first (silences driver warnings)
   unsigned int fb = GLGlobalResources::GetInstance().fallback_texture();
-  for (int u = 0; u < 5; ++u) { glActiveTexture(GL_TEXTURE0 + u); glBindTexture(GL_TEXTURE_2D, fb); }
+  for (int u = 0; u < 6; ++u) { glActiveTexture(GL_TEXTURE0 + u); glBindTexture(GL_TEXTURE_2D, fb); }
 
   // unit 0: albedo
   glActiveTexture(GL_TEXTURE0);
@@ -250,6 +250,16 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
     program.SetInt("use_emissive", 0);
   }
 
+  // unit 5: clearcoat normal
+  glActiveTexture(GL_TEXTURE5);
+  program.SetInt("texture_clearcoat_normal", 5);
+  if (texture.has_clearcoat_normal()) {
+    glBindTexture(GL_TEXTURE_2D, texture.clearcoat_normal_tex_id());
+    program.SetInt("use_clearcoat_normal", 1);
+  } else {
+    program.SetInt("use_clearcoat_normal", 0);
+  }
+
   // PBR factors
   program.SetVector4("base_color_factor",  material.base_color);
   program.SetFloat("metallic_factor",      material.metallic_factor);
@@ -257,6 +267,14 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
   program.SetFloat("normal_scale",         material.normal_scale);
   program.SetFloat("occlusion_strength",   material.occlusion_strength);
   program.SetVector3("emissive_factor",    material.emissive_factor);
+
+  // KHR_materials_clearcoat uniforms
+  program.SetFloat("clearcoat_factor",    material.clearcoat_factor);
+  program.SetFloat("clearcoat_roughness", material.clearcoat_roughness_factor);
+
+  // KHR_materials_specular uniforms
+  program.SetFloat("specular_factor",       material.specular_factor);
+  program.SetVector3("specular_color_factor", material.specular_color_factor);
 
   // Alpha
   program.SetInt("alpha_mode",   material.alpha_mode);

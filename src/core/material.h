@@ -36,6 +36,19 @@ class Material {
   float alpha_cutoff = 0.5f;
   bool  double_sided = false;
 
+  // ── KHR_materials_clearcoat ───────────────────────────────────────────────
+  float        clearcoat_factor            = 0.0f;
+  float        clearcoat_roughness_factor  = 0.0f;
+  unsigned int gl_clearcoat_tex            = 0;
+  unsigned int gl_clearcoat_roughness_tex  = 0;
+  unsigned int gl_clearcoat_normal_tex     = 0;
+
+  // ── KHR_materials_specular ────────────────────────────────────────────────
+  float        specular_factor             = 1.0f;
+  float        specular_color_factor[3]    = {1.0f, 1.0f, 1.0f};
+  unsigned int gl_specular_tex             = 0;
+  unsigned int gl_specular_color_tex       = 0;
+
  private:
   static int unique_id_;
 };

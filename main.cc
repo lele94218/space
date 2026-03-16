@@ -2,12 +2,15 @@
 #include <glad/glad.h>
 #include <glog/logging.h>
 #include <stab/stab_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "deps/stab/stb_image_write.h"
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
 
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include "src/core/camera_object.h"
 #include "src/core/scene_object.h"
@@ -24,12 +27,23 @@
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
+
+  // --screenshot [output.png] : render 60 frames then save PNG and exit
+  bool screenshot_mode = false;
+  std::string screenshot_path = "/tmp/space_screenshot.png";
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--screenshot") {
+      screenshot_mode = true;
+      if (i + 1 < argc && argv[i+1][0] != '-')
+        screenshot_path = argv[++i];
+    }
+  }
   stbi_set_flip_vertically_on_load(true);
 
   SDL_Window* window = nullptr;
   int SCR_WIDTH  = 1280;
   int SCR_HEIGHT = 720;
-  bool is_fullscreen = true;
+  bool is_fullscreen = false;
   float last_time  = 0.0f;
   float total_time = 0.0f;
   int   frame_count = 0;
@@ -70,7 +84,7 @@ int main(int argc, char* argv[]) {
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
   gladLoadGLLoader(SDL_GL_GetProcAddress);
-  SDL_GL_SetSwapInterval(1); // VSync
+  SDL_GL_SetSwapInterval(screenshot_mode ? 0 : 1); // VSync (off in screenshot mode)
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_MULTISAMPLE); // needed for MSAA FBO to work
@@ -157,6 +171,8 @@ int main(int argc, char* argv[]) {
   int  pending_samples = config.msaa_samples;
 
   bool gameIsRunning = true;
+  int total_frames = 0;
+  float start_time = SDL_GetTicks() / 1000.0f;
   while (gameIsRunning) {
     SDL_Event event;
     float current_time = SDL_GetTicks() / 1000.0f;
@@ -329,6 +345,25 @@ int main(int argc, char* argv[]) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     SDL_GL_SwapWindow(window);
+
+    // Screenshot mode: save PNG after 60 frames and exit
+    total_frames++;
+    // Screenshot: save after 3 seconds of wall-clock time
+    float elapsed = SDL_GetTicks() / 1000.0f - start_time;
+    if (screenshot_mode && elapsed >= 3.0f) {
+      int w, h;
+      SDL_GetWindowSize(window, &w, &h);
+      std::vector<unsigned char> pixels(w * h * 3);
+      glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+      // Flip vertically (OpenGL origin is bottom-left)
+      for (int y = 0; y < h / 2; ++y) {
+        for (int x = 0; x < w * 3; ++x)
+          std::swap(pixels[y * w * 3 + x], pixels[(h - 1 - y) * w * 3 + x]);
+      }
+      stbi_write_png(screenshot_path.c_str(), w, h, 3, pixels.data(), w * 3);
+      LOG(ERROR) << "Screenshot saved: " << screenshot_path;
+      gameIsRunning = false;
+    }
   }
 
   ImGui_ImplOpenGL3_Shutdown();
