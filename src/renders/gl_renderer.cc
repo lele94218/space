@@ -26,8 +26,8 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
   }
 
   // TODO: we assume that one scene should use the same shader.
-  GLProgram program = *GLGlobalResources::GetInstance().programs().at("model_shader").get();
-  glUseProgram(program.program());
+  const GLProgram* program_ptr = GLGlobalResources::GetInstance().programs().at("model_shader").get();
+  glUseProgram(program_ptr->program());
 
   const unsigned int SCR_WIDTH = 800;
   const unsigned int SCR_HEIGHT = 600;
@@ -44,16 +44,16 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
 
   // lighting
   glm::vec3 light_pos(1.2f, 1.0f, 2.0f);
-  program.SetVector3("light.position", glm::value_ptr(light_pos));
-  program.SetVector3("light.diffuse", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
-  program.SetVector3("light.ambient", glm::value_ptr(glm::vec3(0.1f, 0.1f, 0.1f)));
-  program.SetVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
-  program.SetVector3("view_pos", glm::value_ptr(camera.position()));
-  program.SetInt("material.diffuse", 0);
-  program.SetFloat("material.shininess", 32.0f);
-  program.SetMatrix4("projection", glm::value_ptr(projection));
-  program.SetMatrix4("view", glm::value_ptr(view));
-  program.SetMatrix4("model", glm::value_ptr(model));
+  program_ptr->SetVector3("light.position", glm::value_ptr(light_pos));
+  program_ptr->SetVector3("light.diffuse", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
+  program_ptr->SetVector3("light.ambient", glm::value_ptr(glm::vec3(0.1f, 0.1f, 0.1f)));
+  program_ptr->SetVector3("light.specular", glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.8f)));
+  program_ptr->SetVector3("view_pos", glm::value_ptr(camera.position()));
+  program_ptr->SetInt("material.diffuse", 0);
+  program_ptr->SetFloat("material.shininess", 32.0f);
+  program_ptr->SetMatrix4("projection", glm::value_ptr(projection));
+  program_ptr->SetMatrix4("view", glm::value_ptr(view));
+  program_ptr->SetMatrix4("model", glm::value_ptr(model));
 
   for (const Object3D* object : render_list_) {
     for (int index = 0; index < object->size(); ++index) {

@@ -53,6 +53,10 @@ std::string GLProgram::LoadShaderFile(const std::string& file_path) {
   std::ifstream shader_file;
   std::stringstream shader_stream;
   shader_file.open(file_path);
+  if (!shader_file.is_open()) {
+    LOG(ERROR) << "ERROR::SHADER::FILE_NOT_FOUND: " << file_path;
+    return "";
+  }
   shader_stream << shader_file.rdbuf();
   shader_file.close();
   return shader_stream.str();

@@ -34,7 +34,9 @@ int main(int argc, char* argv[]) {
   } else {
     LOG(ERROR) << "SDL video system is ready to go\n";
   }
-  SDL_SetRelativeMouseMode(SDL_TRUE);
+  // Start with normal cursor (not captured) so ImGui works
+  // Press Tab to toggle mouse capture for camera look
+  bool mouseCaptured = false;
   // Before we create our window, specify OpenGL version
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -124,24 +126,23 @@ int main(int argc, char* argv[]) {
       camera.ProcessKeyboard(CameraMovement::RIGHT, delta_time);
     }
 
-    // Only rotate camera when ImGui doesn't want the mouse
-    if (!io.WantCaptureMouse) {
+    // Mouse look only when captured (Tab to toggle)
+    if (mouseCaptured) {
       int x_offset, y_offset;
       SDL_GetRelativeMouseState(&x_offset, &y_offset);
-      // reversed since y-coordinates go from bottom to top
       camera.ProcessMouseMovement(x_offset, -y_offset);
-    } else {
-      // Drain relative mouse state so it doesn't accumulate
-      int x_offset, y_offset;
-      SDL_GetRelativeMouseState(&x_offset, &y_offset);
     }
 
     // Start our event loop
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL2_ProcessEvent(&event);
-      // Handle each specific event
       if (event.type == SDL_QUIT) {
         gameIsRunning = false;
+      }
+      // Tab: toggle mouse capture for camera look
+      if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_TAB) {
+        mouseCaptured = !mouseCaptured;
+        SDL_SetRelativeMouseMode(mouseCaptured ? SDL_TRUE : SDL_FALSE);
       }
     }
 
@@ -158,6 +159,8 @@ int main(int argc, char* argv[]) {
     if (ImGui::Button("Reset Camera")) {
       camera.Reset();
     }
+    ImGui::Separator();
+    ImGui::Text("Tab: toggle mouse look (%s)", mouseCaptured ? "ON" : "OFF");
     ImGui::Text("WASD: move  Mouse: look");
     ImGui::End();
 
