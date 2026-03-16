@@ -15,6 +15,7 @@
 #include "src/loaders/obj_loader.h"
 #include "src/renders/gl_framebuffer.h"
 #include "src/renders/gl_renderer.h"
+#include "src/renders/i_renderer.h"
 
 // Render configuration — controls the rendering pipeline at runtime
 struct RenderConfig {
@@ -82,7 +83,7 @@ int main(int argc, char* argv[]) {
   ObjLoader loader("assets/backpack/backpack.obj");
   loader.Load();
   SceneObject scene;
-  GLRenderer render;
+  std::unique_ptr<IRenderer> renderer = std::make_unique<GLRenderer>();
   scene.Add(std::move(loader.object_3d_));
 
   // Render config + MSAA FBO
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    render.Render(scene, camera);
+    renderer->Render(scene, camera);
 
     // --- Resolve MSAA → default framebuffer ---
     if (config.msaa_enabled) {

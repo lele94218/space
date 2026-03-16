@@ -4,8 +4,9 @@
 #include "../core/mesh_object.h"
 #include "../core/scene_object.h"
 #include "gl_global_resouces.h"
+#include "i_renderer.h"
 
-class GLRenderer {
+class GLRenderer : public IRenderer {
  public:
   GLRenderer() = default;
 
