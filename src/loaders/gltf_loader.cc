@@ -336,19 +336,7 @@ std::unique_ptr<MeshObject> GLTFLoader::BuildMeshObject(int mesh_index,
 
       mat.alpha_cutoff = jmat.value("alphaCutoff", 0.5f);
 
-      // Hair cards need MASK (not BLEND) to show individual strands.
-      // The glTF file incorrectly marks hair as BLEND; override it.
-      std::string mat_name_lower = mat_name;
-      std::transform(mat_name_lower.begin(), mat_name_lower.end(),
-                     mat_name_lower.begin(), ::tolower);
-      if (mat.alpha_mode == 2 &&
-          (mat_name_lower.find("_hr_") != std::string::npos ||
-           mat_name_lower.find("hair") != std::string::npos)) {
-        mat.alpha_mode = 1;  // BLEND -> MASK
-        mat.alpha_cutoff = 0.5f;
-        LOG(ERROR) << "[GLTF Mat] Override hair BLEND->MASK: " << mat_name;
-      }
-      mat.double_sided = jmat.value("doubleSided", false);
+            mat.double_sided = jmat.value("doubleSided", false);
 
       // ── KHR_materials_clearcoat ─────────────────────────────────────────
       if (jmat.contains("extensions")) {

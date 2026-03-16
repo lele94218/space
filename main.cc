@@ -19,6 +19,7 @@
 #include "src/loaders/gltf_loader.h"
 #include "src/render_config.h"
 #include "src/renders/gl_framebuffer.h"
+#include "src/renders/gl_ibl.h"
 #include "src/renders/gl_renderer.h"
 #include "src/renders/gl_texture.h"
 #include "src/renders/i_renderer.h"
@@ -131,6 +132,15 @@ int main(int argc, char* argv[]) {
   gl_renderer_ptr->SetConfig(&config);
   GLRenderer* raw_renderer = gl_renderer_ptr.get();
   std::unique_ptr<IRenderer> renderer = std::move(gl_renderer_ptr);
+
+  // Load IBL environment map for PBR ambient lighting
+  auto ibl = std::make_unique<GLIBL>();
+  if (ibl->Load("assets/env/neutral.hdr")) {
+    raw_renderer->SetIBL(ibl.get());
+    LOG(ERROR) << "IBL loaded successfully";
+  } else {
+    LOG(ERROR) << "IBL load failed — falling back to flat ambient";
+  }
 
   SceneObject scene;
   CameraObject camera;
@@ -315,6 +325,9 @@ int main(int argc, char* argv[]) {
     ImGui::Text("Light");
     ImGui::SliderFloat("Intensity", &config.light_intensity, 0.0f, 200.0f);
     ImGui::SliderFloat3("Position", config.light_pos, -10.0f, 10.0f);
+    if (config.use_pbr && ibl->loaded()) {
+      ImGui::SliderFloat("IBL Intensity", &config.ibl_intensity, 0.0f, 3.0f);
+    }
     // Sample count selector (only meaningful when MSAA is on)
     if (config.msaa_enabled) {
       const char* sample_items[] = { "1x", "2x", "4x", "8x" };

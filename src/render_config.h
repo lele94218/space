@@ -17,4 +17,7 @@ struct RenderConfig {
   // Light
   float light_intensity = 100.0f;
   float light_pos[3]    = {3.0f, 5.0f, 5.0f};
+
+  // IBL
+  float ibl_intensity = 1.0f;
 };

@@ -91,6 +91,7 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDepthMask(GL_FALSE);  // BLEND pass: keep depth test but don't write depth
   for (const Object3D* object : render_list_) {
     for (int index = 0; index < object->size(); ++index) {
       const Object3D* sub = object->get(index);
@@ -100,6 +101,7 @@ void GLRenderer::Render(const SceneObject& scene, const CameraObject& camera) {
       }
     }
   }
+  glDepthMask(GL_TRUE);
   glDisable(GL_BLEND);
 }
 
@@ -196,9 +198,9 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
                          const GLTexture& texture,
                          const Material& material,
                          unsigned int index_size) const {
-  // Bind fallback white texture to all 6 units first (silences driver warnings)
+  // Bind fallback white texture to all 9 units first (silences driver warnings)
   unsigned int fb = GLGlobalResources::GetInstance().fallback_texture();
-  for (int u = 0; u < 6; ++u) { glActiveTexture(GL_TEXTURE0 + u); glBindTexture(GL_TEXTURE_2D, fb); }
+  for (int u = 0; u < 9; ++u) { glActiveTexture(GL_TEXTURE0 + u); glBindTexture(GL_TEXTURE_2D, fb); }
 
   // unit 0: albedo
   glActiveTexture(GL_TEXTURE0);
@@ -279,6 +281,27 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
   // Alpha
   program.SetInt("alpha_mode",   material.alpha_mode);
   program.SetFloat("alpha_cutoff", material.alpha_cutoff);
+
+  // IBL textures (units 6, 7, 8)
+  if (ibl_ && ibl_->loaded()) {
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_->irradiance_map());
+    program.SetInt("irradiance_map", 6);
+
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_->prefilter_map());
+    program.SetInt("prefilter_map", 7);
+
+    glActiveTexture(GL_TEXTURE8);
+    glBindTexture(GL_TEXTURE_2D, ibl_->brdf_lut());
+    program.SetInt("brdf_lut", 8);
+
+    program.SetInt("use_ibl", 1);
+    float ibl_intensity = config_ ? config_->ibl_intensity : 1.0f;
+    program.SetFloat("ibl_intensity", ibl_intensity);
+  } else {
+    program.SetInt("use_ibl", 0);
+  }
 
   // Double-sided
   if (material.double_sided) glDisable(GL_CULL_FACE);

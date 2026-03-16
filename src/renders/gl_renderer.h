@@ -4,6 +4,7 @@
 #include "../core/mesh_object.h"
 #include "../core/scene_object.h"
 #include "gl_global_resouces.h"
+#include "gl_ibl.h"
 #include "i_renderer.h"
 
 struct RenderConfig;  // forward declaration
@@ -14,6 +15,7 @@ class GLRenderer : public IRenderer {
 
   void Render(const SceneObject& scene, const CameraObject& camera) override;
   void SetConfig(RenderConfig* config) { config_ = config; }
+  void SetIBL(GLIBL* ibl) { ibl_ = ibl; }
   void Reset() { render_list_.clear(); initialized_ = false; }
 
  private:
@@ -33,4 +35,5 @@ class GLRenderer : public IRenderer {
   std::vector<const Object3D*> render_list_;
   bool initialized_ = false;
   RenderConfig* config_ = nullptr;
+  GLIBL*        ibl_    = nullptr;
 };

@@ -47,6 +47,13 @@ uniform vec3 light_pos;
 uniform vec3 light_color;
 uniform vec3 view_pos;
 
+// IBL
+uniform int         use_ibl       = 0;
+uniform samplerCube irradiance_map;   // unit 6
+uniform samplerCube prefilter_map;    // unit 7
+uniform sampler2D   brdf_lut;         // unit 8
+uniform float       ibl_intensity = 1.0;
+
 const float PI = 3.14159265359;
 
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
@@ -77,14 +84,16 @@ void main() {
   vec4 albedo_sample = (has_albedo == 1)
       ? texture(texture_albedo, tex_coords)
       : vec4(1.0);
-  vec4 base = albedo_sample * base_color_factor;
+  // base_color_factor is already linear (glTF spec); only texture needs sRGB->linear
+  vec4 base_tex_linear = vec4(pow(max(albedo_sample.rgb, vec3(0.0)), vec3(2.2)), albedo_sample.a);
+  vec4 base = base_tex_linear * base_color_factor;
 
   // Alpha handling
   float alpha = base.a;
   if (alpha_mode == 1 && alpha < alpha_cutoff) discard;
 
   // sRGB -> linear for albedo RGB
-  vec3 albedo = pow(max(base.rgb, vec3(0.0)), vec3(2.2));
+  vec3 albedo = base.rgb;  // already linear (corrected above)
 
   // ── Metallic / Roughness ─────────────────────────────────────────────────
   float metallic  = metallic_factor;
@@ -156,8 +165,29 @@ void main() {
        + vec3(cc_spec) * radiance * NdotL_cc * clearcoat_factor;
   }
 
-  // ── Ambient + AO ─────────────────────────────────────────────────────────
-  vec3 color = vec3(0.03) * albedo * ao + Lo;
+  // ── Ambient + AO (IBL or flat) ───────────────────────────────────────────
+  vec3 ambient;
+  if (use_ibl == 1) {
+    // Diffuse IBL: sample irradiance map in normal direction
+    vec3 irradiance  = texture(irradiance_map, N).rgb;
+    vec3 diffuse_ibl = irradiance * albedo * (1.0 - metallic);
+
+    // Specular IBL: split-sum approximation
+    vec3 R = reflect(-V, N);
+    const float MAX_LOD = 4.0;
+    vec3 prefilteredColor = textureLod(prefilter_map, R, roughness * MAX_LOD).rgb;
+    vec2 brdf_uv = vec2(max(dot(N, V), 0.0), roughness);
+    vec2 brdf    = texture(brdf_lut, brdf_uv).rg;
+    // Fresnel with roughness for IBL (Lazarov 2012 / Karis 2013)
+    vec3 F_ibl = F0 + (max(vec3(1.0 - roughness), F0) - F0)
+                 * pow(clamp(1.0 - max(dot(N, V), 0.0), 0.0, 1.0), 5.0);
+    vec3 specular_ibl = prefilteredColor * (F_ibl * brdf.x + brdf.y);
+
+    ambient = (diffuse_ibl + specular_ibl) * ao * ibl_intensity;
+  } else {
+    ambient = vec3(0.03) * albedo * ao;
+  }
+  vec3 color = ambient + Lo;
 
   // ── Emissive ─────────────────────────────────────────────────────────────
   if (use_emissive == 1) {
@@ -168,7 +198,10 @@ void main() {
   }
 
   // ── Tone mapping + gamma ─────────────────────────────────────────────────
-  color = color / (color + vec3(1.0));
+  // ACESFilmic (Hill 2015) — more filmic contrast than Reinhard
+  color *= 0.6;  // exposure pre-scale
+  const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+  color = clamp((color*(a*color+b))/(color*(c*color+d)+e), 0.0, 1.0);
   color = pow(color, vec3(1.0 / 2.2));
 
   frag_color = vec4(color, alpha);
