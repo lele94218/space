@@ -3,26 +3,26 @@
 #include <glad/glad.h>
 #include <glog/logging.h>
 #include <stab/stab_image.h>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
-// Global cache: file path -> GL texture ID (avoids reloading same file for multiple meshes)
+// Global cache: file path -> GL texture ID
 static std::unordered_map<std::string, unsigned int> g_file_tex_cache;
 
 void GLTexture::ClearFileCache() {
   g_file_tex_cache.clear();
 }
 
-static unsigned int UploadTexture(int width, int height, int num_channels, unsigned char* data) {
-  GLenum format = GL_RGB;
-  if (num_channels == 1)      format = GL_RED;
-  else if (num_channels == 3) format = GL_RGB;
-  else if (num_channels == 4) format = GL_RGBA;
+static unsigned int UploadToGL(int width, int height, int channels, const unsigned char* data) {
+  GLenum fmt = GL_RGB;
+  if (channels == 1)      fmt = GL_RED;
+  else if (channels == 4) fmt = GL_RGBA;
 
   unsigned int id;
   glGenTextures(1, &id);
   glBindTexture(GL_TEXTURE_2D, id);
-  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+  glTexImage2D(GL_TEXTURE_2D, 0, fmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, data);
   glGenerateMipmap(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -31,55 +31,40 @@ static unsigned int UploadTexture(int width, int height, int num_channels, unsig
   return id;
 }
 
-// Load texture: file path or embedded "*N" data
-static unsigned int LoadTex(const std::string& path,
-                             const std::unordered_map<std::string, std::vector<unsigned char>>& embedded) {
+static unsigned int LoadFromFile(const std::string& path) {
   if (path.empty()) return 0;
+  auto it = g_file_tex_cache.find(path);
+  if (it != g_file_tex_cache.end()) return it->second;
 
-  // Check file-based cache first
-  if (path[0] != '*') {
-    auto it = g_file_tex_cache.find(path);
-    if (it != g_file_tex_cache.end())
-      return it->second;
-  }
-
-  int width, height, num_channels;
-  unsigned char* data = nullptr;
-
-  if (!path.empty() && path[0] == '*') {
-    // Embedded texture (GLB)
-    auto it = embedded.find(path);
-    if (it == embedded.end()) {
-      LOG(ERROR) << "Embedded texture not found: " << path;
-      return 0;
-    }
-    data = stbi_load_from_memory(it->second.data(), (int)it->second.size(),
-                                 &width, &height, &num_channels, 0);
-  } else {
-    data = stbi_load(path.c_str(), &width, &height, &num_channels, 0);
-  }
-
-  if (!data) {
-    LOG(ERROR) << "Texture failed to load: " << path;
-    return 0;
-  }
-
-  unsigned int id = UploadTexture(width, height, num_channels, data);
+  int w, h, c;
+  unsigned char* data = stbi_load(path.c_str(), &w, &h, &c, 0);
+  if (!data) { LOG(ERROR) << "Texture failed: " << path; return 0; }
+  unsigned int id = UploadToGL(w, h, c, data);
   stbi_image_free(data);
-
-  // Cache file-based textures
-  if (path[0] != '*')
-    g_file_tex_cache[path] = id;
-
+  g_file_tex_cache[path] = id;
   return id;
 }
 
 GLTexture::GLTexture(const Material& material) {
-  const auto& emb = material.embedded_textures;
-  diffuse_id_   = LoadTex(material.map_texture_path,           emb);
-  specular_id_  = LoadTex(material.metalness_map_texture_path, emb);
-  normal_id_    = LoadTex(material.normal_map_texture_path,    emb);
-  roughness_id_ = LoadTex(material.roughness_map_texture_path, emb);
-  ao_id_        = LoadTex(material.ao_map_texture_path,        emb);
+  // GLTFLoader path: direct GL IDs already uploaded
+  if (material.gl_albedo != 0) {
+    diffuse_id_             = material.gl_albedo;
+    metallic_roughness_id_  = material.gl_metallic_roughness;
+    normal_id_              = material.gl_normal;
+    ao_id_                  = material.gl_occlusion;
+    emissive_id_            = material.gl_emissive;
+    // Also expose metallic_roughness as roughness/specular for legacy code paths
+    roughness_id_ = material.gl_metallic_roughness;
+    specular_id_  = material.gl_metallic_roughness;
+    path_ = "gltf";
+    return;
+  }
+
+  // ObjLoader path: load from file
+  diffuse_id_   = LoadFromFile(material.map_texture_path);
+  specular_id_  = LoadFromFile(material.metalness_map_texture_path);
+  normal_id_    = LoadFromFile(material.normal_map_texture_path);
+  roughness_id_ = LoadFromFile(material.roughness_map_texture_path);
+  ao_id_        = LoadFromFile(material.ao_map_texture_path);
   path_ = material.map_texture_path;
 }

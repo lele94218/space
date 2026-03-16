@@ -153,21 +153,28 @@ void GLRenderer::DrawBlinnPhong(const GLBindingState& binding_state,
   // Pass base color factor (modulates diffuse or serves as fallback color)
   program.SetVector4("base_color_factor", material.base_color);
 
-  // unit 0: diffuse — texture_sample=1 if diffuse exists
+  // Bind fallback white texture to all units first to silence driver warnings
+  unsigned int fb = GLGlobalResources::GetInstance().fallback_texture();
+  for (int u = 0; u < 5; ++u) {
+    glActiveTexture(GL_TEXTURE0 + u);
+    glBindTexture(GL_TEXTURE_2D, fb);
+  }
+
+  // unit 0: diffuse
+  glActiveTexture(GL_TEXTURE0);
   if (texture.diffuse_id()) {
-    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
-    program.SetInt("texture_diffuse1", 0);
     program.SetInt("texture_sample", 1);
   } else {
     program.SetInt("texture_sample", 0);
   }
+  program.SetInt("texture_diffuse1", 0);
 
-  if (texture.has_specular()) {
-    glActiveTexture(GL_TEXTURE1);
+  // unit 1: specular
+  glActiveTexture(GL_TEXTURE1);
+  if (texture.has_specular())
     glBindTexture(GL_TEXTURE_2D, texture.specular_id());
-    program.SetInt("texture_specular1", 1);
-  }
+  program.SetInt("texture_specular1", 1);
 
   if (texture.has_normal()) {
     glActiveTexture(GL_TEXTURE2);
@@ -189,54 +196,79 @@ void GLRenderer::DrawPBR(const GLBindingState& binding_state,
                          const GLTexture& texture,
                          const Material& material,
                          unsigned int index_size) const {
-  // Pass base color factor
-  program.SetVector4("base_color_factor", material.base_color);
+  // Bind fallback white texture to all 5 units first (silences driver warnings)
+  unsigned int fb = GLGlobalResources::GetInstance().fallback_texture();
+  for (int u = 0; u < 5; ++u) { glActiveTexture(GL_TEXTURE0 + u); glBindTexture(GL_TEXTURE_2D, fb); }
 
   // unit 0: albedo
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
   program.SetInt("texture_albedo", 0);
-
-  // unit 1: specular (if available)
-  if (texture.has_specular()) {
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texture.specular_id());
-    program.SetInt("texture_specular1", 1);
+  if (texture.diffuse_id()) {
+    glBindTexture(GL_TEXTURE_2D, texture.diffuse_id());
+    program.SetInt("has_albedo", 1);
+  } else {
+    program.SetInt("has_albedo", 0);
   }
-  program.SetInt("use_metallic", 0);
+
+  // unit 1: metallic-roughness (packed: G=roughness, B=metallic)
+  glActiveTexture(GL_TEXTURE1);
+  program.SetInt("texture_metallic_rough", 1);
+  if (texture.has_metallic_roughness()) {
+    glBindTexture(GL_TEXTURE_2D, texture.metallic_roughness_id());
+    program.SetInt("use_metallic_rough", 1);
+  } else {
+    program.SetInt("use_metallic_rough", 0);
+  }
 
   // unit 2: normal map
+  glActiveTexture(GL_TEXTURE2);
+  program.SetInt("texture_normal", 2);
   if (texture.has_normal()) {
-    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, texture.normal_id());
-    program.SetInt("texture_normal", 2);
     program.SetInt("use_normal_map", 1);
   } else {
     program.SetInt("use_normal_map", 0);
   }
 
-  // unit 3: roughness
-  if (texture.has_roughness()) {
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, texture.roughness_id());
-    program.SetInt("texture_roughness", 3);
-    program.SetInt("use_roughness", 1);
+  // unit 3: occlusion
+  glActiveTexture(GL_TEXTURE3);
+  program.SetInt("texture_occlusion", 3);
+  if (texture.has_ao()) {
+    glBindTexture(GL_TEXTURE_2D, texture.occlusion_id());
+    program.SetInt("use_occlusion", 1);
   } else {
-    program.SetInt("use_roughness", 0);
+    program.SetInt("use_occlusion", 0);
   }
 
-  // unit 4: ambient occlusion
-  if (texture.has_ao()) {
-    glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, texture.ao_id());
-    program.SetInt("texture_ao", 4);
-    program.SetInt("use_ao", 1);
+  // unit 4: emissive
+  glActiveTexture(GL_TEXTURE4);
+  program.SetInt("texture_emissive", 4);
+  if (texture.has_emissive()) {
+    glBindTexture(GL_TEXTURE_2D, texture.emissive_id());
+    program.SetInt("use_emissive", 1);
   } else {
-    program.SetInt("use_ao", 0);
+    program.SetInt("use_emissive", 0);
   }
+
+  // PBR factors
+  program.SetVector4("base_color_factor",  material.base_color);
+  program.SetFloat("metallic_factor",      material.metallic_factor);
+  program.SetFloat("roughness_factor",     material.roughness_factor);
+  program.SetFloat("normal_scale",         material.normal_scale);
+  program.SetFloat("occlusion_strength",   material.occlusion_strength);
+  program.SetVector3("emissive_factor",    material.emissive_factor);
+
+  // Alpha
+  program.SetInt("alpha_mode",   material.alpha_mode);
+  program.SetFloat("alpha_cutoff", material.alpha_cutoff);
+
+  // Double-sided
+  if (material.double_sided) glDisable(GL_CULL_FACE);
+  else                       glEnable(GL_CULL_FACE);
 
   glBindVertexArray(binding_state.vao());
   glDrawElements(GL_TRIANGLES, index_size, GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
   glActiveTexture(GL_TEXTURE0);
+  glDisable(GL_CULL_FACE);  // reset to no-cull (engine default)
 }

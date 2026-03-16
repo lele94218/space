@@ -13,6 +13,7 @@
 #include "src/core/scene_object.h"
 #include "src/errors/gl_error.h"
 #include "src/loaders/obj_loader.h"
+#include "src/loaders/gltf_loader.h"
 #include "src/render_config.h"
 #include "src/renders/gl_framebuffer.h"
 #include "src/renders/gl_renderer.h"
@@ -111,11 +112,23 @@ int main(int argc, char* argv[]) {
     GLGlobalResources::GetInstance().ClearMeshResources();
     raw_renderer->Reset();
     scene.Clear();
-    ObjLoader loader(path);
-    loader.Load();
-    scene.Add(std::move(loader.object_3d_));
+
+    // Route to GLTFLoader for .glb/.gltf, ObjLoader for everything else
+    bool is_gltf = path.size() >= 4 &&
+                   (path.substr(path.size()-4) == ".glb" ||
+                    (path.size() >= 5 && path.substr(path.size()-5) == ".gltf"));
+    if (is_gltf) {
+      GLTFLoader loader(path);
+      loader.Load();
+      scene.Add(std::move(loader.object_3d_));
+    } else {
+      ObjLoader loader(path);
+      loader.Load();
+      scene.Add(std::move(loader.object_3d_));
+    }
     current_model = path;
-    LOG(INFO) << "Loaded model: " << path;
+    config.use_pbr = is_gltf;
+    LOG(INFO) << "Loaded model: " << path << " PBR=" << config.use_pbr;
   };
 
   if (!current_model.empty()) load_model(current_model);

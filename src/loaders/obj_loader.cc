@@ -97,28 +97,13 @@ std::unique_ptr<MeshObject> ObjLoader::ProcessMesh(aiMesh* mesh, const aiScene* 
     aiMaterial* ai_material = scene->mMaterials[mesh->mMaterialIndex];
     aiString ai_str;
 
-    // Helper lambda: resolve texture path, cache embedded textures if *N format
+    // Helper lambda: resolve file-based texture path (.obj only)
     auto resolve = [&](aiTextureType type, std::string& out_path) {
       if (!ai_material->GetTextureCount(type)) return;
       ai_material->GetTexture(type, 0, &ai_str);
       std::string raw = ai_str.C_Str();
-      if (!raw.empty() && raw[0] == '*') {
-        // Embedded texture in GLB
-        int idx = std::stoi(raw.substr(1));
-        if (idx < (int)scene->mNumTextures) {
-          const aiTexture* tex = scene->mTextures[idx];
-          out_path = raw;  // use "*N" as map key
-          if (!material.embedded_textures.count(raw)) {
-            size_t data_size = tex->mHeight == 0
-                ? tex->mWidth   // compressed (PNG/JPG): mWidth = byte count
-                : tex->mWidth * tex->mHeight * 4;  // raw RGBA
-            const unsigned char* src = reinterpret_cast<const unsigned char*>(tex->pcData);
-            material.embedded_textures[raw] = std::vector<unsigned char>(src, src + data_size);
-          }
-        }
-      } else {
+      if (!raw.empty() && raw[0] != '*')
         out_path = root_dir_ + "/" + raw;
-      }
     };
 
     resolve(aiTextureType_DIFFUSE,           material.map_texture_path);
