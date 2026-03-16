@@ -34,9 +34,8 @@ int main(int argc, char* argv[]) {
   } else {
     LOG(ERROR) << "SDL video system is ready to go\n";
   }
-  // Start with normal cursor (not captured) so ImGui works
-  // Press Tab to toggle mouse capture for camera look
-  bool mouseCaptured = false;
+  bool rightMouseDown = false;  // 右键按住 = 旋转视角
+  int lastMouseX = 0, lastMouseY = 0;
   // Before we create our window, specify OpenGL version
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -126,11 +125,17 @@ int main(int argc, char* argv[]) {
       camera.ProcessKeyboard(CameraMovement::RIGHT, delta_time);
     }
 
-    // Mouse look only when captured (Tab to toggle)
-    if (mouseCaptured) {
-      int x_offset, y_offset;
-      SDL_GetRelativeMouseState(&x_offset, &y_offset);
-      camera.ProcessMouseMovement(x_offset, -y_offset);
+    // 右键按住时旋转视角
+    if (rightMouseDown) {
+      int mouseX, mouseY;
+      SDL_GetMouseState(&mouseX, &mouseY);
+      int x_offset = mouseX - lastMouseX;
+      int y_offset = mouseY - lastMouseY;
+      lastMouseX = mouseX;
+      lastMouseY = mouseY;
+      if (x_offset != 0 || y_offset != 0) {
+        camera.ProcessMouseMovement(x_offset, -y_offset);
+      }
     }
 
     // Start our event loop
@@ -139,10 +144,15 @@ int main(int argc, char* argv[]) {
       if (event.type == SDL_QUIT) {
         gameIsRunning = false;
       }
-      // Tab: toggle mouse capture for camera look
-      if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_TAB) {
-        mouseCaptured = !mouseCaptured;
-        SDL_SetRelativeMouseMode(mouseCaptured ? SDL_TRUE : SDL_FALSE);
+      // 右键按下/抬起 — 切换视角旋转
+      if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_RIGHT) {
+        if (!io.WantCaptureMouse) {
+          rightMouseDown = true;
+          SDL_GetMouseState(&lastMouseX, &lastMouseY);
+        }
+      }
+      if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_RIGHT) {
+        rightMouseDown = false;
       }
     }
 
@@ -160,8 +170,8 @@ int main(int argc, char* argv[]) {
       camera.Reset();
     }
     ImGui::Separator();
-    ImGui::Text("Tab: toggle mouse look (%s)", mouseCaptured ? "ON" : "OFF");
-    ImGui::Text("WASD: move  Mouse: look");
+    ImGui::Text("右键拖动: 旋转视角");
+    ImGui::Text("WASD: 移动");
     ImGui::End();
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
